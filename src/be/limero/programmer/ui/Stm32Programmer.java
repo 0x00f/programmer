@@ -1,0 +1,173 @@
+package be.limero.programmer.ui;
+
+import java.awt.EventQueue;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.JRadioButton;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.border.EmptyBorder;
+
+import be.limero.programmer.Stm32Model;
+
+public class Stm32Programmer extends JFrame {
+
+	private JPanel contentPane;
+	private JTextField txtMqttConnection;
+	private JTextField txtMqttPrefix;
+	private JTextField txtBinaryFile;
+	private Stm32Model stm32;
+	private JLabel lblBootloaderversion;
+
+	/**
+	 * Launch the application.
+	 */
+	public static void main(String[] args) {
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				try {
+					Stm32Programmer frame = new Stm32Programmer();
+					frame.setVisible(true);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+
+	/**
+	 * Create the frame.
+	 */
+	public Stm32Programmer() {
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setBounds(100, 100, 950, 602);
+		contentPane = new JPanel();
+		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+		setContentPane(contentPane);
+		contentPane.setLayout(null);
+		
+		JLabel lblMqttHostConnection = new JLabel("MQTT Host connection ");
+		lblMqttHostConnection.setBounds(10, 11, 111, 14);
+		contentPane.add(lblMqttHostConnection);
+		
+		txtMqttConnection = new JTextField();
+		txtMqttConnection.setText("tcp://iot.eclipse.org:1883");
+		txtMqttConnection.setBounds(131, 8, 249, 20);
+		contentPane.add(txtMqttConnection);
+		txtMqttConnection.setColumns(10);
+		
+		JLabel lblPrefixStm = new JLabel("Prefix device :");
+		lblPrefixStm.setBounds(390, 11, 77, 14);
+		contentPane.add(lblPrefixStm);
+		
+		txtMqttPrefix = new JTextField();
+		txtMqttPrefix.setText("limero314/ESP_F82638263/");
+		txtMqttPrefix.setBounds(477, 8, 172, 20);
+		contentPane.add(txtMqttPrefix);
+		txtMqttPrefix.setColumns(10);
+		
+		JButton btnConnect = new JButton("Connect");
+		btnConnect.setBounds(659, 7, 89, 23);
+		contentPane.add(btnConnect);
+		
+		JLabel lblStatus = new JLabel("Status");
+		lblStatus.setBounds(10, 539, 914, 14);
+		contentPane.add(lblStatus);
+		
+		JProgressBar progressBar = new JProgressBar();
+		progressBar.setBounds(10, 517, 914, 14);
+		contentPane.add(progressBar);
+		
+		JTextArea txtrLogging = new JTextArea();
+		txtrLogging.setText("Logging");
+		txtrLogging.setBounds(10, 177, 914, 329);
+		contentPane.add(txtrLogging);
+		
+		txtBinaryFile = new JTextField();
+		txtBinaryFile.setBounds(131, 42, 518, 20);
+		contentPane.add(txtBinaryFile);
+		txtBinaryFile.setColumns(10);
+		
+		JLabel lblBinaryFile = new JLabel("Binary file");
+		lblBinaryFile.setHorizontalAlignment(SwingConstants.RIGHT);
+		lblBinaryFile.setBounds(10, 45, 111, 14);
+		contentPane.add(lblBinaryFile);
+		
+		JButton btnBrowse = new JButton("Browse...");
+		btnBrowse.setBounds(659, 41, 89, 23);
+		contentPane.add(btnBrowse);
+		
+		JButton btnReset = new JButton("Reset");
+		btnReset.setBounds(10, 70, 89, 23);
+		contentPane.add(btnReset);
+		
+		JButton btnGo = new JButton("Go");
+		btnGo.setBounds(109, 70, 89, 23);
+		contentPane.add(btnGo);
+		
+		JButton btnProgram = new JButton("Program");
+		btnProgram.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				stm32.setBinFile(txtBinaryFile.getText());
+			}
+		});
+		btnProgram.setBounds(208, 70, 89, 23);
+		contentPane.add(btnProgram);
+		
+		JButton btnRead = new JButton("Read");
+		btnRead.setBounds(307, 70, 89, 23);
+		contentPane.add(btnRead);
+		
+		JButton btnVerify = new JButton("Verify");
+		btnVerify.setBounds(406, 70, 89, 23);
+		contentPane.add(btnVerify);
+		
+		JButton btnDoItAll = new JButton("Do it all");
+		btnDoItAll.setBounds(505, 70, 89, 23);
+		contentPane.add(btnDoItAll);
+		
+		JRadioButton rdbtnReset = new JRadioButton("Reset");
+		rdbtnReset.setBounds(600, 69, 109, 23);
+		contentPane.add(rdbtnReset);
+		
+		JRadioButton rdbtnProgram = new JRadioButton("Program");
+		rdbtnProgram.setBounds(600, 95, 109, 23);
+		contentPane.add(rdbtnProgram);
+		
+		JRadioButton rdbtnVerify = new JRadioButton("Verify");
+		rdbtnVerify.setBounds(600, 121, 109, 23);
+		contentPane.add(rdbtnVerify);
+		
+		JRadioButton rdbtnGo = new JRadioButton("Go");
+		rdbtnGo.setBounds(600, 147, 109, 23);
+		contentPane.add(rdbtnGo);
+		
+		lblBootloaderversion = new JLabel("BootloaderVersion");
+		lblBootloaderversion.setBounds(10, 99, 128, 14);
+		contentPane.add(lblBootloaderversion);
+		stm32 =  new Stm32Model();
+	}
+	
+	public void updateView() {
+		EventQueue.invokeLater(new Runnable(){
+
+			@Override
+			public void run() {
+				lblBootloaderversion.setText(stm32.getBootloaderVersion());
+				
+			}
+			
+			
+		});
+	}
+	protected JLabel getLblBootloaderversion() {
+		return lblBootloaderversion;
+	}
+}
