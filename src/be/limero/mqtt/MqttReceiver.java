@@ -23,6 +23,7 @@ import be.limero.common.LogHandler;
 public class MqttReceiver extends HashMap<String, MqttEntry> implements MqttCallback, IMqttActionListener {
 
 	private static final Logger log = Logger.getLogger(MqttReceiver.class.getName());
+	MqttListener listener=null;
 	String host = "iot.eclipse.org";
 	int port = 1883;
 	MqttAsyncClient mqttClient;
@@ -38,7 +39,7 @@ public class MqttReceiver extends HashMap<String, MqttEntry> implements MqttCall
 		connOpts.setKeepAliveInterval(60);
 	}
 
-	void publish(String topic, byte[] value) {
+	public void publish(String topic, byte[] value) {
 		try {
 			MqttMessage mm = new MqttMessage();
 			mm.setQos(2);
@@ -51,7 +52,7 @@ public class MqttReceiver extends HashMap<String, MqttEntry> implements MqttCall
 		}
 	}
 
-	void publish(String topic, Bytes value) {
+	public void publish(String topic, Bytes value) {
 		try {
 			MqttMessage mm = new MqttMessage();
 			mm.setQos(2);
@@ -90,6 +91,9 @@ public class MqttReceiver extends HashMap<String, MqttEntry> implements MqttCall
 	public void messageArrived(String topic, MqttMessage msg) throws Exception {
 		try {
 //			log.info("messageArrived " + topic);
+			if ( listener != null ) {
+				listener.onMessage(topic, new Bytes(msg.getPayload()));
+			}
 			MqttEntry entry = get(topic);
 			String value = cborToString(msg.getPayload());
 			log.info(topic + " = " + value + " -- " + new Bytes(msg.getPayload()).toString());
@@ -194,6 +198,16 @@ public class MqttReceiver extends HashMap<String, MqttEntry> implements MqttCall
 	 */
 	public void setPrefix(String prefix) {
 		this.prefix = prefix;
+	}
+	
+	
+
+	public MqttListener getListener() {
+		return listener;
+	}
+
+	public void setListener(MqttListener listener) {
+		this.listener = listener;
 	}
 
 	public static void main(String[] args) {

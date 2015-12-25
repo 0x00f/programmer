@@ -341,6 +341,14 @@ public class Cbor extends Bytes {
 		}
 		return null;
 	}
+	
+	public String getString() {
+		Token token = readToken();
+		if ( token.type == CborType.C_STRING) {
+			return token.str;
+		}
+		return null;
+	}
 
 	public Integer getInteger() {
 		Token token = readToken();

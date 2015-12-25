@@ -7,10 +7,13 @@ import be.limero.common.Util;
 public class Stm32Model {
 	String log;
 	String status;
+	String mqttConnectionString;
 	String MqttPrefix;
 	byte bootloaderVersion;
 	short chipId;
 	byte[] commands;
+	Integer progress;
+	Boolean connected;
 	
 	String binFile;
 	Vector<MemoryPage> binPages;
@@ -21,7 +24,10 @@ public class Stm32Model {
 	
 	
 	public Stm32Model(){
-		
+		progress=0;
+		status="undefined status";
+		bootloaderVersion=0;
+		connected = false;
 	}
 	
 	
@@ -111,6 +117,36 @@ public class Stm32Model {
 
 	public void setBinFile(String binFile) {
 		this.binFile = binFile;
+	}
+
+
+	public String getMqttConnectionString() {
+		return mqttConnectionString;
+	}
+
+
+	public void setMqttConnectionString(String mqttConnectionString) {
+		this.mqttConnectionString = mqttConnectionString;
+	}
+
+
+	public Integer getProgress() {
+		return progress;
+	}
+
+
+	public void setProgress(Integer progress) {
+		this.progress = progress;
+	}
+
+
+	public Boolean getConnected() {
+		return connected;
+	}
+
+
+	public void setConnected(Boolean connected) {
+		this.connected = connected;
 	}
 
 	

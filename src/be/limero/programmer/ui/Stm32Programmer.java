@@ -15,6 +15,7 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
+import be.limero.programmer.Stm32Controller;
 import be.limero.programmer.Stm32Model;
 
 public class Stm32Programmer extends JFrame {
@@ -23,8 +24,15 @@ public class Stm32Programmer extends JFrame {
 	private JTextField txtMqttConnection;
 	private JTextField txtMqttPrefix;
 	private JTextField txtBinaryFile;
-	private Stm32Model stm32;
+	private Stm32Model model;
+	private Stm32Controller controller;
 	private JLabel lblBootloaderversion;
+	private JRadioButton rdbtnReset;
+	private JRadioButton rdbtnProgram;
+	private JRadioButton rdbtnVerify;
+	private JRadioButton rdbtnGo;
+	private JLabel lblStatus;
+	private JProgressBar progressBar;
 
 	/**
 	 * Launch the application.
@@ -68,20 +76,25 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(lblPrefixStm);
 		
 		txtMqttPrefix = new JTextField();
-		txtMqttPrefix.setText("limero314/ESP_F82638263/");
+		txtMqttPrefix.setText("limero314/ESP_00072740/");
 		txtMqttPrefix.setBounds(477, 8, 172, 20);
 		contentPane.add(txtMqttPrefix);
 		txtMqttPrefix.setColumns(10);
 		
 		JButton btnConnect = new JButton("Connect");
+		btnConnect.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				controller.connect();
+			}
+		});
 		btnConnect.setBounds(659, 7, 89, 23);
 		contentPane.add(btnConnect);
 		
-		JLabel lblStatus = new JLabel("Status");
+		lblStatus = new JLabel("Status");
 		lblStatus.setBounds(10, 539, 914, 14);
 		contentPane.add(lblStatus);
 		
-		JProgressBar progressBar = new JProgressBar();
+		progressBar = new JProgressBar();
 		progressBar.setBounds(10, 517, 914, 14);
 		contentPane.add(progressBar);
 		
@@ -115,7 +128,7 @@ public class Stm32Programmer extends JFrame {
 		JButton btnProgram = new JButton("Program");
 		btnProgram.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				stm32.setBinFile(txtBinaryFile.getText());
+				controller.program();
 			}
 		});
 		btnProgram.setBounds(208, 70, 89, 23);
@@ -133,26 +146,28 @@ public class Stm32Programmer extends JFrame {
 		btnDoItAll.setBounds(505, 70, 89, 23);
 		contentPane.add(btnDoItAll);
 		
-		JRadioButton rdbtnReset = new JRadioButton("Reset");
+		rdbtnReset = new JRadioButton("Reset");
 		rdbtnReset.setBounds(600, 69, 109, 23);
 		contentPane.add(rdbtnReset);
 		
-		JRadioButton rdbtnProgram = new JRadioButton("Program");
+		rdbtnProgram = new JRadioButton("Program");
 		rdbtnProgram.setBounds(600, 95, 109, 23);
 		contentPane.add(rdbtnProgram);
 		
-		JRadioButton rdbtnVerify = new JRadioButton("Verify");
+		rdbtnVerify = new JRadioButton("Verify");
 		rdbtnVerify.setBounds(600, 121, 109, 23);
 		contentPane.add(rdbtnVerify);
 		
-		JRadioButton rdbtnGo = new JRadioButton("Go");
+		rdbtnGo = new JRadioButton("Go");
 		rdbtnGo.setBounds(600, 147, 109, 23);
 		contentPane.add(rdbtnGo);
 		
 		lblBootloaderversion = new JLabel("BootloaderVersion");
 		lblBootloaderversion.setBounds(10, 99, 128, 14);
 		contentPane.add(lblBootloaderversion);
-		stm32 =  new Stm32Model();
+
+		controller=new Stm32Controller(this);
+		model = controller.getModel();
 	}
 	
 	public void updateView() {
@@ -160,8 +175,9 @@ public class Stm32Programmer extends JFrame {
 
 			@Override
 			public void run() {
-				lblBootloaderversion.setText(stm32.getBootloaderVersion());
-				
+				lblBootloaderversion.setText(model.getBootloaderVersion());
+				getLblStatus().setText(model.getStatus());
+				getProgressBar().setValue(model.getProgress());
 			}
 			
 			
@@ -169,5 +185,32 @@ public class Stm32Programmer extends JFrame {
 	}
 	protected JLabel getLblBootloaderversion() {
 		return lblBootloaderversion;
+	}
+	public JTextField getTxtMqttConnection() {
+		return txtMqttConnection;
+	}
+	public JTextField getTxtMqttPrefix() {
+		return txtMqttPrefix;
+	}
+	public JTextField getTxtBinaryFile() {
+		return txtBinaryFile;
+	}
+	public JRadioButton getRdbtnReset() {
+		return rdbtnReset;
+	}
+	public JRadioButton getRdbtnProgram() {
+		return rdbtnProgram;
+	}
+	public JRadioButton getRdbtnVerify() {
+		return rdbtnVerify;
+	}
+	public JRadioButton getRdbtnGo() {
+		return rdbtnGo;
+	}
+	public JLabel getLblStatus() {
+		return lblStatus;
+	}
+	public JProgressBar getProgressBar() {
+		return progressBar;
 	}
 }
