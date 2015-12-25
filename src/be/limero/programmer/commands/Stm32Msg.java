@@ -75,7 +75,8 @@ public class Stm32Msg extends Cbor {
 	public Vector<Bytes> data;
 	public Vector<Integer> acks;
 
-	protected Stm32Msg parse() {
+	public Stm32Msg parse() {
+		
 		offset(0);
 		cmd = getInteger();
 		messageId = getInteger();

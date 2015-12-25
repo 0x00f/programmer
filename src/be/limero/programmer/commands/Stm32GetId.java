@@ -5,15 +5,15 @@ import java.util.logging.Logger;
 import be.limero.common.Bytes;
 import be.limero.programmer.Stm32Model;
 
-public class Stm32GetVersionCommands extends Stm32Msg {
+public class Stm32GetId extends Stm32Msg {
 
-	private static final Logger log = Logger.getLogger(Stm32GetVersionCommands.class.getName());
+	private static final Logger log = Logger.getLogger(Stm32GetId.class.getName());
 
 	static byte getCmdByte() {
-		return 0x01;
+		return 0x02;
 	}
 
-	public Stm32GetVersionCommands() {
+	public Stm32GetId() {
 		super(100);
 		cmd = Stm32Msg.CMD.STM32_CMD_BOOT_REQ.ordinal();
 		messageId = Stm32Msg.getNextId();

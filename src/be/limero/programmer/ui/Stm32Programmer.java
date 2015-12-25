@@ -3,6 +3,7 @@ package be.limero.programmer.ui;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.text.SimpleDateFormat;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -33,6 +34,7 @@ public class Stm32Programmer extends JFrame {
 	private JRadioButton rdbtnGo;
 	private JLabel lblStatus;
 	private JProgressBar progressBar;
+	private JTextArea txtLogging;
 
 	/**
 	 * Launch the application.
@@ -98,10 +100,10 @@ public class Stm32Programmer extends JFrame {
 		progressBar.setBounds(10, 517, 914, 14);
 		contentPane.add(progressBar);
 		
-		JTextArea txtrLogging = new JTextArea();
-		txtrLogging.setText("Logging");
-		txtrLogging.setBounds(10, 177, 914, 329);
-		contentPane.add(txtrLogging);
+		txtLogging = new JTextArea();
+		txtLogging.setText("Logging");
+		txtLogging.setBounds(10, 177, 914, 329);
+		contentPane.add(txtLogging);
 		
 		txtBinaryFile = new JTextField();
 		txtBinaryFile.setBounds(131, 42, 518, 20);
@@ -114,6 +116,11 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(lblBinaryFile);
 		
 		JButton btnBrowse = new JButton("Browse...");
+		btnBrowse.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				
+			}
+		});
 		btnBrowse.setBounds(659, 41, 89, 23);
 		contentPane.add(btnBrowse);
 		
@@ -127,6 +134,11 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(btnReset);
 		
 		JButton btnGo = new JButton("Go");
+		btnGo.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				controller.go();
+			}
+		});
 		btnGo.setBounds(109, 70, 89, 23);
 		contentPane.add(btnGo);
 		
@@ -144,6 +156,11 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(btnRead);
 		
 		JButton btnVerify = new JButton("Verify");
+		btnVerify.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				controller.verify();
+			}
+		});
 		btnVerify.setBounds(406, 70, 89, 23);
 		contentPane.add(btnVerify);
 		
@@ -179,6 +196,19 @@ public class Stm32Programmer extends JFrame {
 		});
 		btnEnterBootloader.setBounds(10, 121, 172, 23);
 		contentPane.add(btnEnterBootloader);
+		
+		JButton btnGetid = new JButton("GetID");
+		btnGetid.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				controller.getId();
+			}
+		});
+		btnGetid.setBounds(192, 121, 89, 23);
+		contentPane.add(btnGetid);
+		
+		JButton btnGetversioncommands = new JButton("GetVersionCommands");
+		btnGetversioncommands.setBounds(291, 121, 150, 23);
+		contentPane.add(btnGetversioncommands);
 
 		controller=new Stm32Controller(this);
 		model = controller.getModel();
@@ -192,6 +222,7 @@ public class Stm32Programmer extends JFrame {
 				lblBootloaderversion.setText(model.getBootloaderVersion());
 				getLblStatus().setText(model.getStatus());
 				getProgressBar().setValue(model.getProgress());
+				txtLogging.setText(model.getLog());
 			}
 			
 			
@@ -226,5 +257,8 @@ public class Stm32Programmer extends JFrame {
 	}
 	public JProgressBar getProgressBar() {
 		return progressBar;
+	}
+	public JTextArea getTxtLogging() {
+		return txtLogging;
 	}
 }

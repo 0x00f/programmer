@@ -1,5 +1,7 @@
 package be.limero.programmer;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Vector;
 
 import be.limero.common.Util;
@@ -28,6 +30,7 @@ public class Stm32Model {
 		status="undefined status";
 		bootloaderVersion=0;
 		connected = false;
+		log="";
 	}
 	
 	
@@ -148,6 +151,13 @@ public class Stm32Model {
 	public void setConnected(Boolean connected) {
 		this.connected = connected;
 	}
+	
+	public void log(String str){
+		SimpleDateFormat sdf=new SimpleDateFormat("HH:mm:ss.SSS");
+		log += "\n" + sdf.format(new Date() )+" | "+str;
+	}
+	
+
 
 	
 	//________________________________________________________________________________
