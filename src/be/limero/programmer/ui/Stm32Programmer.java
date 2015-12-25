@@ -118,6 +118,11 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(btnBrowse);
 		
 		JButton btnReset = new JButton("Reset");
+		btnReset.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				controller.reset();
+			}
+		});
 		btnReset.setBounds(10, 70, 89, 23);
 		contentPane.add(btnReset);
 		
@@ -165,6 +170,15 @@ public class Stm32Programmer extends JFrame {
 		lblBootloaderversion = new JLabel("BootloaderVersion");
 		lblBootloaderversion.setBounds(10, 99, 128, 14);
 		contentPane.add(lblBootloaderversion);
+		
+		JButton btnEnterBootloader = new JButton("Enter bootloader");
+		btnEnterBootloader.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				controller.enterBootloader();
+			}
+		});
+		btnEnterBootloader.setBounds(10, 121, 172, 23);
+		contentPane.add(btnEnterBootloader);
 
 		controller=new Stm32Controller(this);
 		model = controller.getModel();

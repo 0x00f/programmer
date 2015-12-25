@@ -6,6 +6,8 @@ import be.limero.common.Bytes;
 import be.limero.common.Cbor;
 import be.limero.mqtt.MqttListener;
 import be.limero.mqtt.MqttReceiver;
+import be.limero.programmer.commands.Stm32Reset;
+import be.limero.programmer.commands.Stm32EnterBootloader;
 import be.limero.programmer.commands.Stm32Go;
 import be.limero.programmer.commands.Stm32ReadoutProtect;
 import be.limero.programmer.ui.Stm32Programmer;
@@ -45,7 +47,12 @@ public class Stm32Controller implements MqttListener {
 	}
 	
 	public void reset(){
-		Cbor msg= new Stm32ReadoutProtect();
+		Cbor msg= new Stm32Reset();
+		mqtt.publish("stm32/cmd", msg);
+	}
+	
+	public void enterBootloader(){
+		Cbor msg=new Stm32EnterBootloader();
 		mqtt.publish("stm32/cmd", msg);
 	}
 	
