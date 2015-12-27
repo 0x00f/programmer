@@ -21,7 +21,7 @@ public class Stm32ExtendedEraseMemory extends Stm32Msg {
 		super(100);
 		cmd = Stm32Msg.CMD.STM32_CMD_BOOT_REQ.ordinal();
 		messageId = Stm32Msg.getNextId();
-		data.add(crcBytes(getCmdByte()));
+		data.add(complementByte(getCmdByte()));
 		acks.add(2);
 		build();
 	};

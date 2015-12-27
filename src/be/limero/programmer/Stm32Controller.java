@@ -17,6 +17,7 @@ import be.limero.programmer.commands.Stm32Go;
 import be.limero.programmer.commands.Stm32Msg;
 import be.limero.programmer.commands.Stm32ReadMemory;
 import be.limero.programmer.commands.Stm32ReadoutProtect;
+import be.limero.programmer.commands.Stm32ReadoutUnprotect;
 import be.limero.programmer.ui.Stm32Programmer;
 
 public class Stm32Controller implements MqttListener {
@@ -71,10 +72,11 @@ public class Stm32Controller implements MqttListener {
 		sendCommand(new Stm32GetVersionCommands());
 		sendCommand(new Stm32GetVersionReadProtection());
 		sendCommand(new Stm32GetId());
+		sendCommand(new Stm32ReadoutUnprotect());
 	}
 	
 	public void readMemory(){
-		sendCommand(new Stm32ReadMemory(0x00, 256));
+		sendCommand(new Stm32ReadMemory(0x08000000, 256));
 	}
 
 	public void verify() {
@@ -119,10 +121,10 @@ public class Stm32Controller implements MqttListener {
 			msg.parse();
 			// find corresponding Stm32Msg
 			Stm32Cmd cmd = queue.get(msg.messageId);
-			log.info(cmd.getResponse().getClass().getSimpleName());
 			cmd.getResponse().resize(value.length());
 			cmd.getResponse().write(value.bytes());
 			cmd.getResponse().parse();
+			log.info(cmd.getResponse().getClass().getSimpleName()+" errno : "+cmd.getResponse().error);
 			queue.remove(cmd);
 			// call handle(model)
 			cmd.getResponse().handle(model);

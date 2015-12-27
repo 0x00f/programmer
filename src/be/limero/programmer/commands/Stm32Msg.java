@@ -36,14 +36,35 @@ public class Stm32Msg extends Cbor {
 	}
 	
 	static Bytes addCrc(Bytes bytes) {
-		byte xor = -1;
+		byte xor ;
 		bytes.offset(0);
+		xor=bytes.read();
+		while (bytes.hasData())
+			xor ^= bytes.read();
+		bytes.write(xor);
+		return bytes;
+	}
+	
+	static Bytes addCrc(byte b) {
+		Bytes bytes = new Bytes(2);
+		byte xor ;
+		bytes.write(b);
+		bytes.offset(0);
+		xor=bytes.read();
 		while (bytes.hasData())
 			xor ^= bytes.read();
 		bytes.write(xor);
 		return bytes;
 	}
 
+	protected static Bytes complementByte(byte cmd) {
+		Bytes bytes = new Bytes(2);
+		bytes.write(cmd);
+		bytes.write(~cmd);
+		return bytes;
+
+	}
+	
 	protected static Bytes crcBytes(byte cmd) {
 		Bytes bytes = new Bytes(2);
 		bytes.write(cmd);

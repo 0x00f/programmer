@@ -18,11 +18,11 @@ public class Stm32ReadMemory extends Stm32Msg {
 		super(100);
 		cmd = Stm32Msg.CMD.STM32_CMD_BOOT_REQ.ordinal();
 		messageId = Stm32Msg.getNextId();
-		data.add(crcBytes(getCmdByte()));
+		data.add(complementByte(getCmdByte()));
 		acks.add(1);
 		data.add(addCrc(quadToBytes(address)));
 		acks.add(1);
-		data.add(crcBytes((byte) (length - 1))); // request length -1
+		data.add(addCrc((byte) (length - 1))); // request length -1
 		acks.add(1);
 		data.add(new Bytes(0)); // empty
 		acks.add(1);

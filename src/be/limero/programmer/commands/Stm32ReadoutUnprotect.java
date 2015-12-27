@@ -1,5 +1,6 @@
 package be.limero.programmer.commands;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import be.limero.common.Bytes;
@@ -11,32 +12,28 @@ public class Stm32ReadoutUnprotect extends Stm32Msg {
 	private static final Logger log = Logger.getLogger(Stm32GetVersionCommands.class.getName());
 
 	static byte getCmdByte() {
-		return (byte)0x83;
+		return (byte)0x92;
 	}
 	
-	public Stm32ReadoutUnprotect(int address,int length) {
+	public Stm32ReadoutUnprotect() {
 		super(100);
 		cmd = Stm32Msg.CMD.STM32_CMD_BOOT_REQ.ordinal();
 		messageId = Stm32Msg.getNextId();
-		data.add(crcBytes(getCmdByte()));
-		acks.add(1);
-		data.add(addCrc(quadToBytes(address)));
-		acks.add(1);
-		data.add(crcBytes((byte)(length-1))); // request length -1 
-		acks.add(1);
-		data.add(new Bytes(0)); 		// empty  
-		acks.add(-(length+1));			// wait for bytes  + CRC		
+		data.add(complementByte(getCmdByte()));
+		acks.add(2);		
 		build();
 	};
 
 	public void handle(Stm32Model stm32) {
-		parse();
-		Bytes bytes;
-		// ACK : 0:CMD ACK, 1:ADDRESS_ACK, 2:LENGTH:ACK, 3:DATA
-		if ((bytes = data.get(0)) != null) {
-			// first 3 bytes == ACKS
-			//TODO update memoryImage
+		try {
+			parse(); // 79 01 04 10 79
+			if (error == 0) {
+
+			} else {
+				log.log(Level.WARNING, " handle failed error : " + error);
+			}
+		} catch (Exception e) {
+			log.log(Level.WARNING, " handle failed ", e);
 		}
-		log.warning(" handle failed ");
 	}
 }
