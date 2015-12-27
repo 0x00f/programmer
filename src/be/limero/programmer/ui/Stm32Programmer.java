@@ -27,7 +27,7 @@ public class Stm32Programmer extends JFrame {
 	private JTextField txtBinaryFile;
 	private Stm32Model model;
 	private Stm32Controller controller;
-	private JLabel lblBootloaderversion;
+	private JLabel lblDeviceInfo;
 	private JRadioButton rdbtnReset;
 	private JRadioButton rdbtnProgram;
 	private JRadioButton rdbtnVerify;
@@ -152,6 +152,11 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(btnProgram);
 		
 		JButton btnRead = new JButton("Read");
+		btnRead.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				controller.readMemory();
+			}
+		});
 		btnRead.setBounds(307, 70, 89, 23);
 		contentPane.add(btnRead);
 		
@@ -184,11 +189,11 @@ public class Stm32Programmer extends JFrame {
 		rdbtnGo.setBounds(600, 147, 109, 23);
 		contentPane.add(rdbtnGo);
 		
-		lblBootloaderversion = new JLabel("BootloaderVersion");
-		lblBootloaderversion.setBounds(10, 99, 128, 14);
-		contentPane.add(lblBootloaderversion);
+		lblDeviceInfo = new JLabel("BootloaderVersion");
+		lblDeviceInfo.setBounds(10, 99, 584, 14);
+		contentPane.add(lblDeviceInfo);
 		
-		JButton btnEnterBootloader = new JButton("Enter bootloader");
+		JButton btnEnterBootloader = new JButton("Bootloader init");
 		btnEnterBootloader.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				controller.enterBootloader();
@@ -207,6 +212,11 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(btnGetid);
 		
 		JButton btnGetversioncommands = new JButton("GetVersionCommands");
+		btnGetversioncommands.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				controller.getVersionCommands();
+			}
+		});
 		btnGetversioncommands.setBounds(291, 121, 150, 23);
 		contentPane.add(btnGetversioncommands);
 
@@ -219,7 +229,7 @@ public class Stm32Programmer extends JFrame {
 
 			@Override
 			public void run() {
-				lblBootloaderversion.setText(model.getBootloaderVersion());
+				lblDeviceInfo.setText(model.getInfo());
 				getLblStatus().setText(model.getStatus());
 				getProgressBar().setValue(model.getProgress());
 				txtLogging.setText(model.getLog());
@@ -229,7 +239,7 @@ public class Stm32Programmer extends JFrame {
 		});
 	}
 	protected JLabel getLblBootloaderversion() {
-		return lblBootloaderversion;
+		return lblDeviceInfo;
 	}
 	public JTextField getTxtMqttConnection() {
 		return txtMqttConnection;

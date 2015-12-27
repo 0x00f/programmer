@@ -42,7 +42,7 @@ public class MqttReceiver extends HashMap<String, MqttEntry> implements MqttCall
 	public void publish(String topic, byte[] value) {
 		try {
 			MqttMessage mm = new MqttMessage();
-			mm.setQos(2);
+			mm.setQos(1);
 			mm.setPayload(value);
 			// mm.setPayload(cbor.addf("B", value).toBytes());
 			mqttClient.publish("PUT/" + prefix + topic, mm);
@@ -55,7 +55,7 @@ public class MqttReceiver extends HashMap<String, MqttEntry> implements MqttCall
 	public void publish(String topic, Bytes value) {
 		try {
 			MqttMessage mm = new MqttMessage();
-			mm.setQos(2);
+			mm.setQos(1);
 			mm.setPayload(value.bytes());
 			// mm.setPayload(cbor.addf("B", value).toBytes());
 			mqttClient.publish("PUT/" + prefix + topic, mm);

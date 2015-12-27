@@ -30,6 +30,13 @@ public class Bytes {
 		capacity = size;
 		used = 0;
 	}
+	
+	public void resize(int size){
+		data = new byte[size];
+		offset = 0;
+		capacity = size;
+		used = 0;
+	}
 
 	public Bytes(byte[] b) {
 		data = b;

@@ -1,5 +1,6 @@
 package be.limero.programmer.commands;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import be.limero.common.Bytes;
@@ -22,15 +23,15 @@ public class Stm32GetId extends Stm32Msg {
 		build();
 	};
 
-	void handle(Stm32Model stm32) {
-		parse();
-		Bytes bytes;
-		if ((bytes = data.get(0)) != null) {
-			if (bytes.peek(0) == 0x79 && bytes.length() > 3) {
-				stm32.setBootloaderVersion(bytes.peek(1));
-				return;
+	public void handle(Stm32Model stm32) {
+		try {
+			parse();		// 79 01 04 10 79
+			if (error == 0 ) {
+				Bytes bytes = data.get(0);
+				stm32.setId(bytes.peek(2)*256+bytes.peek(3));
 			}
+		} catch (Exception e) {
+			log.log(Level.WARNING, " handle failed ", e);
 		}
-		log.warning(" handle failed ");
 	}
 }

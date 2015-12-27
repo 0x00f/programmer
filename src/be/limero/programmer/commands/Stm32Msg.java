@@ -6,10 +6,12 @@ import java.util.logging.Logger;
 import be.limero.common.Bytes;
 import be.limero.common.Cbor;
 import be.limero.common.LogHandler;
+import be.limero.programmer.Stm32Model;
 
 public class Stm32Msg extends Cbor {
 	private static final Logger log = Logger.getLogger(Stm32Msg.class.getName());
 	static Integer _nextMessageId = 0;
+	static Boolean enabled;
 	
 	public enum CMD {
 		INVALID, STM32_CMD_UART_DATA, STM32_CMD_BOOT_ENTER, STM32_CMD_BOOT_REQ, STM32_CMD_RESET
@@ -23,12 +25,14 @@ public class Stm32Msg extends Cbor {
 		super(size);
 		data = new Vector<Bytes>();
 		acks = new Vector<Integer>();
+		enabled=true;
 	}
 
 	public Stm32Msg(byte[] src) {
 		super(src);
 		data = new Vector<Bytes>();
 		acks = new Vector<Integer>();
+		enabled=true;
 	}
 	
 	static Bytes addCrc(Bytes bytes) {
@@ -90,6 +94,10 @@ public class Stm32Msg extends Cbor {
 		}
 		return this;
 	}
+	
+	public void handle(Stm32Model model) {
+		
+	}
 
 	public Stm32Msg build() {
 		clear();
@@ -110,6 +118,14 @@ public class Stm32Msg extends Cbor {
 		return sb.toString();
 	}
 	
+	public static boolean isEnabled() {
+		return enabled;
+	}
+
+	public static void setEnabled(Boolean enabled) {
+		Stm32Msg.enabled = enabled;
+	}
+
 	public static void main(String[] args) {
 		LogHandler.buildLogger();
 		Stm32Msg msg = new Stm32Msg(1000);

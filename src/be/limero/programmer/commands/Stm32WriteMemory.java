@@ -35,7 +35,7 @@ public class Stm32WriteMemory extends Stm32Msg {
 		build();
 	};
 
-	void handle(Stm32Model stm32) {
+	public void handle(Stm32Model stm32) {
 		parse();
 		Bytes bytes;
 		// ACK : 0:CMD ACK, 1:ADDRESS_ACK, 2:LENGTH:ACK, 3:DATA

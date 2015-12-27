@@ -22,7 +22,6 @@ public class Cbor extends Bytes {
 		float _float;
 		boolean _bool;
 		long _long;
-		int _int;
 		String str;
 		Bytes bytes;
 	}
@@ -116,12 +115,12 @@ public class Cbor extends Bytes {
 		minor = hdr & 0x1F;
 		if (minor < 24) {
 			token._length = minor;
-			token._int = minor;
+			token._long = minor;
 		} else if (minor < 28) {
 			token._length = tokenSize[minor - 24];
 			if (token._length <= 4) {
-				token._int = getInt((int) token._length);
-				token._length = token._int;
+				token._long = getInt((int) token._length);
+				token._length = token._long;
 			} else {
 				token._length = getLong((int) token._length);
 			}
@@ -166,7 +165,7 @@ public class Cbor extends Bytes {
 			case 26: // FLOAT32
 			{
 				token.type = CborType.C_FLOAT;
-				token._float = Float.intBitsToFloat(token._int);
+				token._float = Float.intBitsToFloat((int)token._long);
 				break;
 			}
 			case 27: // FLOAT64
@@ -353,7 +352,7 @@ public class Cbor extends Bytes {
 	public Integer getInteger() {
 		Token token = readToken();
 		if (token.type == CborType.C_PINT || token.type == CborType.C_NINT) {
-			return token._int;
+			return (int)token._long;
 		}
 		return null;
 	}

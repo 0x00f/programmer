@@ -11,7 +11,7 @@ public class Stm32ReadoutUnprotect extends Stm32Msg {
 	private static final Logger log = Logger.getLogger(Stm32GetVersionCommands.class.getName());
 
 	static byte getCmdByte() {
-		return 0x11;
+		return (byte)0x83;
 	}
 	
 	public Stm32ReadoutUnprotect(int address,int length) {
@@ -29,7 +29,7 @@ public class Stm32ReadoutUnprotect extends Stm32Msg {
 		build();
 	};
 
-	void handle(Stm32Model stm32) {
+	public void handle(Stm32Model stm32) {
 		parse();
 		Bytes bytes;
 		// ACK : 0:CMD ACK, 1:ADDRESS_ACK, 2:LENGTH:ACK, 3:DATA

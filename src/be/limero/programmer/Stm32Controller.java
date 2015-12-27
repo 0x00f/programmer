@@ -12,8 +12,10 @@ import be.limero.programmer.commands.Stm32Reset;
 import be.limero.programmer.commands.Stm32EnterBootloader;
 import be.limero.programmer.commands.Stm32GetId;
 import be.limero.programmer.commands.Stm32GetVersionCommands;
+import be.limero.programmer.commands.Stm32GetVersionReadProtection;
 import be.limero.programmer.commands.Stm32Go;
 import be.limero.programmer.commands.Stm32Msg;
+import be.limero.programmer.commands.Stm32ReadMemory;
 import be.limero.programmer.commands.Stm32ReadoutProtect;
 import be.limero.programmer.ui.Stm32Programmer;
 
@@ -23,13 +25,14 @@ public class Stm32Controller implements MqttListener {
 	Stm32Model model;
 	Stm32Programmer ui;
 	MqttReceiver mqtt;
-	HashMap<Integer,Stm32Msg> queue;
+	HashMap<Integer,Stm32Cmd> queue;
 
 	public Stm32Controller(Stm32Programmer frame) {
 		model = new Stm32Model();
 		mqtt = new MqttReceiver();
 		ui = frame;
 		ui.updateView();
+		queue = new HashMap<Integer,Stm32Cmd>();
 	}
 
 	public void getModelFromView() {
@@ -42,6 +45,13 @@ public class Stm32Controller implements MqttListener {
 		mqtt.setPrefix(model.getMqttPrefix());
 		mqtt.connect(model.getMqttConnectionString());
 		mqtt.setListener(this);
+	}
+	
+	public void getAllInfo(){
+		sendCommand(new Stm32EnterBootloader());
+		sendCommand(new Stm32GetVersionCommands());
+		sendCommand(new Stm32GetId());
+		sendCommand(new Stm32GetVersionReadProtection());
 	}
 
 	public void loadFile() {
@@ -58,6 +68,13 @@ public class Stm32Controller implements MqttListener {
 
 	public void enterBootloader() {
 		sendCommand(new Stm32EnterBootloader());
+		sendCommand(new Stm32GetVersionCommands());
+		sendCommand(new Stm32GetVersionReadProtection());
+		sendCommand(new Stm32GetId());
+	}
+	
+	public void readMemory(){
+		sendCommand(new Stm32ReadMemory(0x00, 256));
 	}
 
 	public void verify() {
@@ -65,7 +82,7 @@ public class Stm32Controller implements MqttListener {
 	}
 
 	public void go() {
-		sendCommand(new Stm32Go(0x80000000));
+		sendCommand(new Stm32Go(0x000000));
 	}
 
 	public void getId() {
@@ -77,7 +94,11 @@ public class Stm32Controller implements MqttListener {
 	}
 	
 	public void sendCommand(Stm32Msg  msg) {
-		queue.put(msg.messageId, msg);
+		Stm32Cmd cmd=new Stm32Cmd();
+		cmd.setRequest(msg);
+		cmd.setResponse(msg);
+		log.info(msg.getClass().getSimpleName());
+		queue.put(msg.messageId, cmd);
 		mqtt.publish("stm32/cmd", msg);
 	}
 
@@ -97,8 +118,14 @@ public class Stm32Controller implements MqttListener {
 			Stm32Msg msg=new Stm32Msg(value.bytes());
 			msg.parse();
 			// find corresponding Stm32Msg
-			Stm32Msg msg2 = queue.get(msg.messageId);
+			Stm32Cmd cmd = queue.get(msg.messageId);
+			log.info(cmd.getResponse().getClass().getSimpleName());
+			cmd.getResponse().resize(value.length());
+			cmd.getResponse().write(value.bytes());
+			cmd.getResponse().parse();
+			queue.remove(cmd);
 			// call handle(model)
+			cmd.getResponse().handle(model);
 		}
 		ui.updateView();
 	}
