@@ -14,12 +14,12 @@ import be.limero.programmer.Stm32Cmd;
  * @author lieven2
  */
 public class Bytes {
-	private static final Logger log = Logger.getLogger(Stm32Cmd.class.getName());
+	private static final Logger log = Logger.getLogger(Bytes.class.getName());
 	byte[] data;
 	int capacity;
 	int offset;
 	int used;
-	
+
 	public Bytes() {
 		log.warning("empty constructor called");
 	}
@@ -30,8 +30,8 @@ public class Bytes {
 		capacity = size;
 		used = 0;
 	}
-	
-	public void resize(int size){
+
+	public void resize(int size) {
 		data = new byte[size];
 		offset = 0;
 		capacity = size;
@@ -45,11 +45,12 @@ public class Bytes {
 		used = b.length;
 	}
 
-	public Bytes clear(){
-		used=0;
-		offset=0;
+	public Bytes clear() {
+		used = 0;
+		offset = 0;
 		return this;
 	}
+
 	public void write(byte b) {
 		if (offset < capacity) {
 			data[offset] = b;
@@ -57,9 +58,9 @@ public class Bytes {
 			used++;
 		}
 	}
-	
-	public void write(byte[] b){
-		for(int i=0;i<b.length;i++){
+
+	public void write(byte[] b) {
+		for (int i = 0; i < b.length; i++) {
 			write(b[i]);
 		}
 	}
@@ -85,7 +86,7 @@ public class Bytes {
 		}
 		return false;
 	}
-	
+
 	public boolean hasSpace() {
 		if (used < capacity) {
 			return true;
@@ -100,9 +101,13 @@ public class Bytes {
 	public int offset() {
 		return offset;
 	}
-	
-	public int used(){
+
+	public int used() {
 		return used;
+	}
+
+	public int capacity() {
+		return capacity;
 	}
 
 	void move(int dist) {
@@ -114,8 +119,8 @@ public class Bytes {
 	public int length() {
 		return used;
 	}
-	
-	public byte peek(int offset){
+
+	public byte peek(int offset) {
 		return data[offset];
 	}
 
@@ -126,13 +131,33 @@ public class Bytes {
 		}
 		return res;
 	}
-	
-	public Bytes sub(int offset,int length) {
-		Bytes bytes=new Bytes(length);
+
+	public Bytes sub(int offset, int length) {
+		Bytes bytes = new Bytes(length);
 		offset(offset);
-		while(bytes.hasSpace()) 
+		while (bytes.hasSpace())
 			bytes.write(read());
 		return bytes;
+	}
+
+	public void replace(int offset, int length, byte[] dst) {
+
+	}
+
+	public void remove(int offset, int length) {
+
+	}
+
+	public void insert(int offset, int length) {
+		if (used + length < capacity) {
+
+			for (int i = used; i >= offset; i--) {
+				data[i + length] = data[i];
+				data[i]=0;
+			}
+			used += length;
+		} else
+			throw new ArrayIndexOutOfBoundsException();
 	}
 
 	@Override
@@ -144,6 +169,16 @@ public class Bytes {
 			str.append(String.format("%02X", data[i]));
 		}
 		return str.toString();
+	}
+
+	public static void main(String[] args) {
+		LogHandler.buildLogger();
+
+		Bytes bytes = new Bytes(100);
+		bytes.write(new byte[] { 1, 2, 3, 4, 5 });
+		log.info(bytes.toString());
+		bytes.insert(2, 20);
+		log.info(bytes.toString());
 	}
 
 }
