@@ -22,11 +22,11 @@ public class Stm32ReadMemory extends Stm32Msg {
 		acks.add(1);
 		data.add(addCrc(quadToBytes(address)));
 		acks.add(1);
-		data.add(addCrc((byte) (length - 1))); // request length -1
+		data.add(complementByte((byte) (length - 1))); // request length -1
 		acks.add(1);
 		data.add(new Bytes(0)); // empty
-		acks.add(1);
-//		acks.add(-(length + 1)); // wait for bytes + CRC
+//		acks.add(1);
+		acks.add(-(length + 1+3)); // wait for bytes + CRC + 3 ACKS
 		build();
 	};
 

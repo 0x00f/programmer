@@ -76,7 +76,10 @@ public class Stm32Controller implements MqttListener {
 	}
 	
 	public void readMemory(){
-		sendCommand(new Stm32ReadMemory(0x08000000, 256));
+		sendCommand(new Stm32ReadMemory(0x08000000, 128));
+		sendCommand(new Stm32ReadMemory(0x08000080, 128));
+		sendCommand(new Stm32ReadMemory(0x08000100, 128));
+		sendCommand(new Stm32ReadMemory(0x08000180, 128));
 	}
 
 	public void verify() {
