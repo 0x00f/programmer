@@ -4,41 +4,61 @@ import java.util.logging.Logger;
 
 public class Slip extends Bytes {
 	private static final Logger log = Logger.getLogger(Slip.class.getName());
-	final static byte SOF = (byte) 0xC0;
+	final static byte END = (byte) 0xC0;
 	final static byte ESC = (byte) 0xDB;
+	final static byte ESC_END = (byte) 0xDC;
+	final static byte ESC_ESC = (byte) 0xDD;
+	boolean escaped;
 
-	Slip(int size) {
+	public Slip(int size) {
 		super(size);
+		escaped = false;
 	}
 
-	Bytes fill(byte b) {
-		if (b == SOF) {
+	void reset() {
+		escaped = false;
+	}
+
+	public Bytes fill(byte b) {
+		if (b == END) {
 			if (length() > 0) {
-				Bytes result = decode(this);
+				Bytes result = this;
 				clear();
 				return result;
 			}
+		} else if (b == ESC) {
+			escaped = true;
+		} else if (b == ESC_ESC && escaped) {
+			write(ESC);
+			escaped=false;
+		} else if (b == ESC_END && escaped) {
+			write(END);
+			escaped=false;
 		} else {
 			write(b);
 		}
 		return null;
 	}
 
-	static Bytes encode(Bytes bytes) {
+	public static Bytes encode(Bytes bytes) {
 		bytes.offset(0);
-		Bytes sf = new Bytes(bytes.length() + 10);
-		sf.write(SOF);
+		Bytes sf = new Bytes(bytes.length() + 20);
+		sf.write(END);
 		while (bytes.hasData()) {
 			byte b = bytes.read();
-			if (b == SOF || b == ESC) {
+			if (b == END) {
 				sf.write(ESC);
-				sf.write(b ^ 0x20);
+				sf.write(ESC_END);
+			} else if (b == ESC) {
+				sf.write(ESC);
+				sf.write(ESC_ESC);
 			} else {
 				sf.write(b);
 			}
 		}
-		sf.write(SOF);
+		sf.write(END);
 		return sf;
+
 	}
 
 	static Bytes decode(Bytes sf) {
@@ -90,7 +110,7 @@ public class Slip extends Bytes {
 		LogHandler.buildLogger();
 
 		Bytes bytes = new Bytes(100);
-		bytes.write(new byte[] { 1, 2, 3, 4, 5, SOF, ESC });
+		bytes.write(new byte[] { 1, 2, 3, 4, 5, END, ESC });
 		log.info(bytes.toString());
 		bytes = Slip.encode(bytes);
 		log.info(bytes.toString());

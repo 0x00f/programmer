@@ -2,6 +2,7 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
-	<classpathentry kind="lib" path="C:/Data/lieven/workspace/Programmer/lib/mqtt-client-0.4.0.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Libraries"/>
+	<classpathentry kind="lib" path="C:/Users/lieven2/workspace/libraries/json-20160212.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

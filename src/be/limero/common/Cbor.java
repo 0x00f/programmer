@@ -165,7 +165,7 @@ public class Cbor extends Bytes {
 			case 26: // FLOAT32
 			{
 				token.type = CborType.C_FLOAT;
-				token._float = Float.intBitsToFloat((int)token._long);
+				token._float = Float.intBitsToFloat((int) token._long);
 				break;
 			}
 			case 27: // FLOAT64
@@ -340,10 +340,10 @@ public class Cbor extends Bytes {
 		}
 		return null;
 	}
-	
+
 	public String getString() {
 		Token token = readToken();
-		if ( token.type == CborType.C_STRING) {
+		if (token.type == CborType.C_STRING) {
 			return token.str;
 		}
 		return null;
@@ -352,7 +352,7 @@ public class Cbor extends Bytes {
 	public Integer getInteger() {
 		Token token = readToken();
 		if (token.type == CborType.C_PINT || token.type == CborType.C_NINT) {
-			return (int)token._long;
+			return (int) token._long;
 		}
 		return null;
 	}
@@ -614,6 +614,11 @@ public class Cbor extends Bytes {
 		return str.toString();
 	}
 
+	public Cbor addKey(int key) {
+		add(key);
+		return this;
+	}
+
 	public int gotoKey(int field, int index) {
 		offset(0);
 		int count = 0;
@@ -634,6 +639,17 @@ public class Cbor extends Bytes {
 
 	public int gotoKey(int field) {
 		return gotoKey(field, 0);
+	}
+
+	public Cbor addField(int field, Object value) {
+		addKey(field);
+		if (value instanceof String)
+			add((String) value);
+		if (value instanceof Integer)
+			add((Integer) value);
+		if (value instanceof Bytes)
+			add((Bytes) value);
+		return null;
 	}
 
 	public static void main(String[] args) {
