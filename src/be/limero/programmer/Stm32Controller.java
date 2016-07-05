@@ -1,139 +1,90 @@
 package be.limero.programmer;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.logging.Logger;
+import java.net.InetSocketAddress;
 
-import be.limero.common.Bytes;
-import be.limero.common.Cbor;
-import be.limero.mqtt.MqttListener;
-import be.limero.mqtt.MqttReceiver;
-import be.limero.programmer.commands.Stm32Reset;
-import be.limero.programmer.commands.Stm32EnterBootloader;
-import be.limero.programmer.commands.Stm32GetId;
-import be.limero.programmer.commands.Stm32GetVersionCommands;
-import be.limero.programmer.commands.Stm32GetVersionReadProtection;
-import be.limero.programmer.commands.Stm32Go;
-import be.limero.programmer.commands.Stm32Msg;
-import be.limero.programmer.commands.Stm32ReadMemory;
-import be.limero.programmer.commands.Stm32ReadoutProtect;
-import be.limero.programmer.commands.Stm32ReadoutUnprotect;
+import javax.swing.SwingUtilities;
+
+import akka.actor.ActorRef;
+import akka.actor.UntypedActor;
+import akka.event.Logging;
+import akka.event.LoggingAdapter;
+import akka.io.Tcp;
+import akka.io.TcpMessage;
+import akka.util.ByteString;
+import akka.util.ByteStringBuilder;
+import be.limero.network.Request;
 import be.limero.programmer.ui.Stm32Programmer;
+import be.limero.util.Bytes;
+import be.limero.util.Cbor;
+import be.limero.util.Slip;
+import be.limero.util.Str;
 
-public class Stm32Controller implements MqttListener {
-	private static final Logger log = Logger.getLogger(Stm32Controller.class.getName());
+public class Stm32Controller extends UntypedActor {
+	LoggingAdapter log = Logging.getLogger(getContext().system(), this);
+	
+	final ActorRef tcpManager = Tcp.get(getContext().system()).manager();
+	ActorRef tcp;
+	Slip slip;
+
+	boolean _tcpConnected = false;
+
 	// start Mqtt exchange thread
 	Stm32Model model;
 	Stm32Programmer ui;
-	MqttReceiver mqtt;
-	HashMap<Integer,Stm32Cmd> queue;
+	InetSocketAddress remote = new InetSocketAddress("192.168.0.131", 23);
 
-	public Stm32Controller(Stm32Programmer frame) {
-		model = new Stm32Model();
-		mqtt = new MqttReceiver();
+	public Stm32Controller(Stm32Programmer frame, Stm32Model model) {
+
+		this.model = model;
+		slip = new Slip(1024);
 		ui = frame;
 		ui.updateView();
-		queue = new HashMap<Integer,Stm32Cmd>();
+		/*
+		 * tcp = ActorSystem.create("MySystem")
+		 * .actorOf(Props.create(TcpClient.class));
+		 */
 	}
 
 	public void getModelFromView() {
-		model.setMqttConnectionString(ui.getTxtMqttConnection().getText());
-		model.setMqttPrefix(ui.getTxtMqttPrefix().getText());
+		model.setHost(ui.getTxtMqttConnection().getText());
 	}
 
 	public void connect() {
-		getModelFromView();
-		mqtt.setPrefix(model.getMqttPrefix());
-		mqtt.connect(model.getMqttConnectionString());
-		mqtt.setListener(this);
-	}
-	
-	public void getAllInfo(){
-		sendCommand(new Stm32EnterBootloader());
-		sendCommand(new Stm32GetVersionCommands());
-		sendCommand(new Stm32GetId());
-		sendCommand(new Stm32GetVersionReadProtection());
+		remote = new InetSocketAddress(model.getHost(), model.getPort());
+		tcpManager.tell(TcpMessage.connect(remote), getSelf());
 	}
 
-	public void loadFile() {
-
-	}
-
-	public void program() {
-
+	public void disconnect() {
+		tcp.tell(TcpMessage.confirmedClose(), getSelf());
 	}
 
 	public void reset() {
-		sendCommand(new Stm32Reset());
-	}
-
-	public void enterBootloader() {
-		sendCommand(new Stm32EnterBootloader());
-		sendCommand(new Stm32GetVersionCommands());
-		sendCommand(new Stm32GetVersionReadProtection());
-		sendCommand(new Stm32GetId());
-		sendCommand(new Stm32ReadoutUnprotect());
-	}
-	
-	public void readMemory(){
-		sendCommand(new Stm32ReadMemory(0x08000000, 128));
-		sendCommand(new Stm32ReadMemory(0x08000080, 128));
-		sendCommand(new Stm32ReadMemory(0x08000100, 128));
-		sendCommand(new Stm32ReadMemory(0x08000180, 128));
-	}
-
-	public void verify() {
-
+		Bytes bytes = new Request(Request.Cmd.RESET, new byte[] {}).toSlip();
+//		Bytes bytes = Slip.encode(Slip.addCrc(cbor));
+		ByteString bs = new ByteStringBuilder().putBytes(bytes.bytes()).result();
+		tcp.tell(TcpMessage.write(bs), self());
 	}
 
 	public void go() {
-		sendCommand(new Stm32Go(0x000000));
+		Str str=new Str("GET /wiki/Hoofdpagina HTTP/1.1\n\n\n");
+		ByteString bs = new ByteStringBuilder().putBytes(str.bytes()).result();
+		tcp.tell(TcpMessage.write(bs), self());
 	}
 
 	public void getId() {
-		sendCommand(new Stm32GetId());
+		sendCommand(Stm32Protocol.GetId());
 	}
 
 	public void getVersionCommands() {
-		sendCommand(new Stm32GetVersionCommands());
-	}
-	
-	public void sendCommand(Stm32Msg  msg) {
-		Stm32Cmd cmd=new Stm32Cmd();
-		cmd.setRequest(msg);
-		cmd.setResponse(msg);
-		log.info(msg.getClass().getSimpleName());
-		queue.put(msg.messageId, cmd);
-		mqtt.publish("stm32/cmd", msg);
+		sendCommand(Stm32Protocol.GetVersion());
 	}
 
-	@Override
-	public void onMessage(String topic, Bytes value) {
-		Cbor cbor = new Cbor(value.bytes());
-		if (topic.endsWith("stm32/status")) {
-			String status = cbor.getString();
-			model.setStatus(status);
-		} else if (topic.endsWith("stm32/progress")) {
-			Integer progress = cbor.getInteger();
-			model.setProgress(progress);
-		} else if (topic.endsWith("stm32/log")) {
-			String s = cbor.getString();
-			model.log(s);
-		} else if(topic.endsWith("stm32/cmd")) {
-			Stm32Msg msg=new Stm32Msg(value.bytes());
-			msg.parse();
-			// find corresponding Stm32Msg
-			Stm32Cmd cmd = queue.get(msg.messageId);
-			cmd.getResponse().resize(value.length());
-			cmd.getResponse().write(value.bytes());
-			cmd.getResponse().parse();
-			log.info(cmd.getResponse().getClass().getSimpleName()+" errno : "+cmd.getResponse().error);
-			queue.remove(cmd);
-			// call handle(model)
-			cmd.getResponse().handle(model);
-		}
-		ui.updateView();
+	public void sendCommand(byte[] msg) {
+		Bytes bytes = new Request(Request.Cmd.EXEC, msg).toSlip();
+		ByteString bs = new ByteStringBuilder().putBytes(bytes.bytes()).result();
+		tcp.tell(TcpMessage.write(bs), self());
 	}
+
 
 	public Stm32Model getModel() {
 		return model;
@@ -149,6 +100,81 @@ public class Stm32Controller implements MqttListener {
 
 	public void setUi(Stm32Programmer ui) {
 		this.ui = ui;
+	}
+
+	@Override
+	public void onReceive(Object msg) throws Exception {
+		log.info(" msg = " + msg + " sender : " + sender() + " tcp: " + tcp);
+		if (msg instanceof Tcp.Connected) {
+			
+            getSender().tell(TcpMessage.register(getSelf()), getSelf());
+			_tcpConnected = true;
+			model.setConnected(true);
+			tcp = sender();
+		} else if (msg instanceof Tcp.ConnectionClosed) {
+			
+			_tcpConnected = false;
+			model.setConnected(false);
+			
+		} else if (msg instanceof Tcp.CommandFailed) {
+			
+			_tcpConnected = false;
+			model.setConnected(false);
+			
+		}else if (msg instanceof Tcp.Received) {
+			
+			Tcp.Received rcv= (Tcp.Received) msg;
+			byte[] arr = rcv.data().toArray();
+			Bytes bytes = new Bytes(arr);
+			while(bytes.hasData()) {
+				if (slip.fill(bytes.read())) {
+					if ( Slip.isGoodCrc(slip)) {
+						Slip.removeCrc(slip);
+						slip.offset(0);
+						Cbor cbor = new Cbor(1025);
+						while (slip.hasData()) {
+							cbor.write(slip.read());
+						}
+						log.info("cbor =" + cbor.toString());
+						cbor.offset(0);
+						int cmd = cbor.getInteger();
+						if (cmd == Request.Cmd.LOG_OUTPUT.ordinal()) {
+							cbor.getInteger();
+							cbor.getInteger();
+							Bytes byt = cbor.getBytes();
+							String line = new String(byt.bytes(),
+									"UTF-8");
+							log.info(" log " + line);
+							model.setLog(model.getLog()+"\n"+line);
+						}
+					}
+					slip.reset();
+				}
+			}
+			
+		} else if (msg instanceof String) {
+					
+			switch ((String) msg) {
+			case "connect": {
+				connect();
+				break;
+			}
+			case "disconnect": {
+				disconnect();
+				model.setConnected(false);
+				break;
+			}
+			case "reset": {
+				reset();
+				break;
+			}
+			case "go": {
+				go();
+				break;
+			}
+			}
+		}
+		ui.updateView();
 	}
 
 }

@@ -7,8 +7,8 @@ import java.net.Socket;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import be.limero.common.Bytes;
-import be.limero.common.LogHandler;
+import be.limero.util.Bytes;
+import be.limero.util.LogHandler;
 
 public class TelnetTest {
 	private static final Logger log = Logger.getLogger(TelnetTest.class.getName());

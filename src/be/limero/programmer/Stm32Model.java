@@ -5,11 +5,23 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Vector;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class Stm32Model {
+	@Setter
+	@Getter
 	String log;
+	@Setter
+	@Getter
 	String status;
-	String mqttConnectionString;
-	String MqttPrefix;
+	@Setter
+	@Getter
+	String host;
+	@Setter
+	@Getter
+	int port;
+	
 	byte bootloaderVersion;
 	short chipId;
 	byte[] commands;
@@ -18,13 +30,10 @@ public class Stm32Model {
 	Boolean connected;
 
 	String binFile;
-	Vector<MemoryPage> binPages;
-
-	MemoryImage binFileImage;
-	MemoryImage memoryImage;
 	byte[] flashMemory;
 
 	public Stm32Model() {
+
 		progress = 0;
 		status = "undefined status";
 		bootloaderVersion = 0;
@@ -39,29 +48,8 @@ public class Stm32Model {
 
 	}
 
-	public String getLog() {
-		return log;
-	}
 
-	public void setLog(String log) {
-		this.log = log;
-	}
 
-	public String getStatus() {
-		return status;
-	}
-
-	public void setStatus(String status) {
-		this.status = status;
-	}
-
-	public String getMqttPrefix() {
-		return MqttPrefix;
-	}
-
-	public void setMqttPrefix(String mqttPrefix) {
-		MqttPrefix = mqttPrefix;
-	}
 
 	public String getBootloaderVersion() {
 		return "" + (bootloaderVersion >> 4) + "." + (bootloaderVersion & 0xF);
@@ -99,14 +87,6 @@ public class Stm32Model {
 		this.binFile = binFile;
 	}
 
-	public String getMqttConnectionString() {
-		return mqttConnectionString;
-	}
-
-	public void setMqttConnectionString(String mqttConnectionString) {
-		this.mqttConnectionString = mqttConnectionString;
-	}
-
 	public Integer getProgress() {
 		return progress;
 	}
@@ -135,6 +115,7 @@ public class Stm32Model {
 	public void setId(int id) {
 		this.id = id;
 	}
+
 
 	// ________________________________________________________________________________
 
