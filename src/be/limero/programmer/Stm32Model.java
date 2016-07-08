@@ -3,23 +3,18 @@ package be.limero.programmer;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.Vector;
 
 import lombok.Getter;
 import lombok.Setter;
 
 public class Stm32Model {
-	@Setter
-	@Getter
+
 	String log;
-	@Setter
-	@Getter
+
 	String status;
-	@Setter
-	@Getter
+
 	String host;
-	@Setter
-	@Getter
+
 	int port;
 	
 	byte bootloaderVersion;
@@ -114,6 +109,38 @@ public class Stm32Model {
 
 	public void setId(int id) {
 		this.id = id;
+	}
+
+	public String getLog() {
+		return log;
+	}
+
+	public void setLog(String log) {
+		this.log = log;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public String getHost() {
+		return host;
+	}
+
+	public void setHost(String host) {
+		this.host = host;
+	}
+
+	public int getPort() {
+		return port;
+	}
+
+	public void setPort(int port) {
+		this.port = port;
 	}
 
 

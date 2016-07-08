@@ -2,6 +2,7 @@ package be.limero.network;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import be.limero.network.Request.Cmd;
 import be.limero.util.Bytes;
 import be.limero.util.Cbor;

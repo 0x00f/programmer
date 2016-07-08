@@ -3,7 +3,8 @@ package be.limero.programmer.ui;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.font.TextHitInfo;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -21,8 +22,6 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import be.limero.programmer.Stm32Controller;
 import be.limero.programmer.Stm32Model;
-import java.beans.PropertyChangeListener;
-import java.beans.PropertyChangeEvent;
 
 public class Stm32Programmer extends JFrame {
 
@@ -82,7 +81,7 @@ public class Stm32Programmer extends JFrame {
 				model.setHost(txtHost.getText());
 			}
 		});
-		txtHost.setText("esp8266.local");
+		txtHost.setText("localhost");
 		txtHost.setBounds(90, 8, 249, 20);
 		contentPane.add(txtHost);
 		txtHost.setColumns(10);
@@ -166,7 +165,6 @@ public class Stm32Programmer extends JFrame {
 		btnRead.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				controller.tell("read", null);
-				;
 			}
 		});
 		btnRead.setBounds(307, 70, 89, 23);
@@ -220,7 +218,7 @@ public class Stm32Programmer extends JFrame {
 				controller.tell("getId", null);
 			}
 		});
-		btnGetid.setBounds(192, 121, 89, 23);
+		btnGetid.setBounds(291, 121, 89, 23);
 		contentPane.add(btnGetid);
 
 		JButton btnGetversioncommands = new JButton("GetVersionCommands");
@@ -229,7 +227,7 @@ public class Stm32Programmer extends JFrame {
 				controller.tell("getVersion", null);
 			}
 		});
-		btnGetversioncommands.setBounds(291, 121, 150, 23);
+		btnGetversioncommands.setBounds(390, 121, 150, 23);
 		contentPane.add(btnGetversioncommands);
 
 		JLabel lblPort = new JLabel("Port");
@@ -242,13 +240,22 @@ public class Stm32Programmer extends JFrame {
 				model.setPort(Integer.valueOf(textPort.getText()));
 			}
 		});
-		textPort.setText("23");
+		textPort.setText("3881");
 		textPort.setBounds(406, 8, 46, 20);
 		contentPane.add(textPort);
 		textPort.setColumns(10);
+		
+		JButton btnGet = new JButton("Get");
+		btnGet.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				controller.tell("getVersion", null);
+			}
+		});
+		btnGet.setBounds(192, 121, 89, 23);
+		contentPane.add(btnGet);
 
 		model = new Stm32Model();
-		controller = ActorSystem.create("MySystem").actorOf(Props.create(Stm32Controller.class, this, model),
+		controller = ActorSystem.create("System").actorOf(Props.create(Stm32Controller.class, this, model),
 				"Stm32Controller");
 
 	}

@@ -12,11 +12,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Libraries"/>
-	<classpathentry kind="lib" path="C:/Users/lieven2/workspace/libraries/json-20160212.jar"/>
-	<classpathentry kind="lib" path="C:/Users/lieven2/workspace/libraries/vertx-core-3.2.1.jar"/>
-	<classpathentry kind="lib" path="C:/Users/lieven2/workspace/libraries/netty-3.10.5.Final.jar"/>
-	<classpathentry kind="lib" path="C:/Users/lieven2/workspace/libraries/netty-all-4.0.35.Final.jar"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/JavaCommon"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Lombok"/>
 	<classpathentry kind="con" path="org.eclipse.m2e.MAVEN2_CLASSPATH_CONTAINER">
 		<attributes>
@@ -24,5 +19,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry combineaccessrules="false" kind="src" path="/Commons"/>
+	<classpathentry kind="lib" path="C:/Data/lieven/workspace/libraries/lombok.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
