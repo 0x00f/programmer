@@ -81,7 +81,7 @@ public class Stm32Programmer extends JFrame {
 				model.setHost(txtHost.getText());
 			}
 		});
-		txtHost.setText("localhost");
+		txtHost.setText("esp8266.local");
 		txtHost.setBounds(90, 8, 249, 20);
 		contentPane.add(txtHost);
 		txtHost.setColumns(10);
@@ -263,7 +263,7 @@ public class Stm32Programmer extends JFrame {
 	public void updateView() {
 		EventQueue.invokeLater(new Runnable() {
 
-			@Override
+
 			public void run() {
 
 				if (model.getConnected()) {

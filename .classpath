@@ -19,6 +19,5 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry combineaccessrules="false" kind="src" path="/Commons"/>
-	<classpathentry kind="lib" path="C:/Data/lieven/workspace/libraries/lombok.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
