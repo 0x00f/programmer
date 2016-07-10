@@ -1,5 +1,9 @@
 package be.limero.programmer;
 
+import java.util.HashMap;
+
+import be.limero.util.Bytes;
+
 /*
 3.1 Get command . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
 3.2 Get Version & Read Protection Status command . . . . . . . . . . . . . . . . . . . 10
@@ -26,22 +30,27 @@ public class Stm32Protocol {
 	static final byte X_RECV_VAR_MIN_1 = 0x44; // receive first byte for length
 												// of
 												// rest
-	// to receive
+												// to receive
 
-	static final byte GET = 0;
-	static final byte GET_VERSION = 1;
-	static final byte GET_ID = 2;
-	static final byte READ_MEMORY = 0x11;
-	static final byte GO = 0x21;
-	static final byte WRITE_MEMORY = 0x31;
-	static final byte ERASE_MEMORY = 0x41;
-	static final byte EXTENDED_ERASE_MEMORY = 0x44;
-	static final byte WRITE_PROTECT = 0x63;
-	static final byte WRITE_UNPROTECT = 0x73;
-	static final byte READ_PROTECT = (byte) 0x82;
-	static final byte READ_UNPROTECT = (byte) 0x92;
+	public static final byte GET = 0;
+	public static final byte GET_VERSION = 1;
+	public static final byte GET_ID = 2;
+	public static final byte READ_MEMORY = 0x11;
+	public static final byte GO = 0x21;
+	public static final byte WRITE_MEMORY = 0x31;
+	public static final byte ERASE_MEMORY = 0x41;
+	public static final byte EXTENDED_ERASE_MEMORY = 0x44;
+	public static final byte WRITE_PROTECT = 0x63;
+	public static final byte WRITE_UNPROTECT = 0x73;
+	public static final byte READ_PROTECT = (byte) 0x82;
+	public static final byte READ_UNPROTECT = (byte) 0x92;
+
+	static final byte ACK = (byte) 0x79;
+	static final byte NACK = (byte) 0x1F;
 
 	final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
+	
+
 
 	public static String bytesToHex(byte[] bytes) {
 		char[] hexChars = new char[bytes.length * 3];
@@ -53,6 +62,11 @@ public class Stm32Protocol {
 		}
 		return new String(hexChars);
 	}
+
+	public byte version;
+	public byte commands[] = null;
+	public byte pid[]=null;
+	public byte memory[]=null;
 
 	static void ASSERT(boolean expr) throws ArrayIndexOutOfBoundsException {
 		if (expr)
@@ -69,7 +83,8 @@ public class Stm32Protocol {
 	}
 
 	static byte fullXor(int word) {
-		return (byte) (slice(word, 0) ^ slice(word, 1) ^ slice(word, 2) ^ slice(word, 3));
+		return (byte) (slice(word, 0) ^ slice(word, 1) ^ slice(word, 2)
+				^ slice(word, 3));
 	}
 
 	static byte fullXor(byte[] arr) {
@@ -79,53 +94,129 @@ public class Stm32Protocol {
 		return x;
 	}
 
+	interface Exchange {
+		byte[] format(Object...args);
+		boolean parse(byte[] reply);
+		Object get(String name);
+	}
+	
+	
 	static byte[] Get() {
-		return new byte[] { X_SEND, 1, GET, xor(GET), X_WAIT_ACK, X_RECV_VAR, X_WAIT_ACK };
+		return new byte[] { X_SEND, 1, GET, xor(GET), X_WAIT_ACK, X_RECV_VAR,
+				X_WAIT_ACK };
+	}
+
+	boolean ParseGet(Bytes reply) {
+		if (reply.read() != ACK)
+			return false;
+		int length = (reply.read() & 0xFF) + 1;
+		if (reply.available() < length + 1)
+			return false;
+		version = reply.read();
+		commands = new byte[length];
+		for (int i = 0; i < length; i++)
+			commands[i] = reply.read();
+		if (reply.read() != ACK)
+			return false;
+		return true;
 	}
 
 	static byte[] GetVersion() {
-		return new byte[] { X_SEND, 1, GET_VERSION, xor(GET_VERSION), X_WAIT_ACK, X_RECV, 3, X_WAIT_ACK };
+		return new byte[] { X_SEND, 1, GET_VERSION, xor(GET_VERSION),
+				X_WAIT_ACK, X_RECV, 3, X_WAIT_ACK };
+	}
+
+	boolean ParseGetVersion(Bytes reply) {
+		if (reply.available() < 5)
+			return false;
+		if (reply.read() != ACK)
+			return false;
+		version = reply.read();
+		reply.read();
+		reply.read();
+		if (reply.read() != ACK)
+			return false;
+		return true;
 	}
 
 	static byte[] GetId() {
-		return new byte[] { X_SEND, 1, GET_ID, xor(GET_ID), X_WAIT_ACK, X_RECV_VAR_MIN_1, X_RECV, 2, X_WAIT_ACK };
+		return new byte[] { X_SEND, 1, GET_ID, xor(GET_ID), X_WAIT_ACK,
+				X_RECV_VAR, X_RECV, 2, X_WAIT_ACK };
+	}
+	
+	boolean ParseGetId(Bytes reply) {
+		if (reply.read() != ACK)
+			return false;
+		int length = (reply.read() & 0xFF) + 1;
+		if (reply.available() < length + 1)
+			return false;
+		pid = new byte[length];
+		for (int i = 0; i < length; i++)
+			pid[i] = reply.read();
+		if (reply.read() != ACK)
+			return false;
+		return true;
 	}
 
 	static byte[] ReadMemory(int address, int length) {
 		ASSERT(length > 0 && length < 257);
-		byte Read_Memory[] = { X_SEND, 2, READ_MEMORY, xor(READ_MEMORY), X_WAIT_ACK, //
+		byte Read_Memory[] = { X_SEND, 1, READ_MEMORY, xor(READ_MEMORY),
+				X_WAIT_ACK, //
 				X_SEND, 4, slice(address, 3), slice(address, 2), //
-				slice(address, 1), slice(address, 0), fullXor(address), X_WAIT_ACK, //
+				slice(address, 1), slice(address, 0), fullXor(address),
+				X_WAIT_ACK, //
 				X_SEND, 1, (byte) (length - 1), xor(length - 1), X_WAIT_ACK, //
-				X_RECV, (byte) length, X_WAIT_ACK };
+				X_RECV, (byte) (length-1), X_WAIT_ACK };
 		return Read_Memory;
+	}
+	
+	boolean ParseReadMemory(Bytes reply) {
+		if (reply.read() != ACK)
+			return false;
+		int length = (reply.read() & 0xFF) + 1;
+		if (reply.available() < length + 1)
+			return false;
+		memory = new byte[length];
+		for (int i = 0; i < length; i++)
+			memory[i] = reply.read();
+		byte xr = reply.read(); //TODO check CRC
+		if (reply.read() != ACK)
+			return false;
+		return true;
 	}
 
 	static byte[] Go(int address) {
-		return new byte[] { X_SEND, 1, GO, xor(GO), X_WAIT_ACK, X_SEND, 5, slice(address, 3), slice(address, 2), //
-				slice(address, 1), slice(address, 0), fullXor(address), X_WAIT_ACK };
+		return new byte[] { X_SEND, 1, GO, xor(GO), X_WAIT_ACK, X_SEND, 5,
+				slice(address, 3), slice(address, 2), //
+				slice(address, 1), slice(address, 0), fullXor(address),
+				X_WAIT_ACK };
 	}
 
 	static byte[] WriteMemory(int address, byte[] instr) {
-		byte[] Write_Memory = { X_SEND, 1, WRITE_MEMORY, xor(WRITE_MEMORY), X_WAIT_ACK, X_SEND, 5, slice(address, 3),
-				slice(address, 2), //
-				slice(address, 1), slice(address, 0), fullXor(address), X_WAIT_ACK };
+		byte[] Write_Memory = { X_SEND, 1, WRITE_MEMORY, xor(WRITE_MEMORY),
+				X_WAIT_ACK, X_SEND, 5, slice(address, 3), slice(address, 2), //
+				slice(address, 1), slice(address, 0), fullXor(address),
+				X_WAIT_ACK };
 		byte[] Write_Memory_Closure = { fullXor(instr), X_WAIT_ACK };
-		byte[] result = new byte[instr.length + Write_Memory.length + Write_Memory_Closure.length];
+		byte[] result = new byte[instr.length + Write_Memory.length
+				+ Write_Memory_Closure.length];
 		System.arraycopy(Write_Memory, 0, result, 0, Write_Memory.length);
 		System.arraycopy(instr, 0, result, Write_Memory.length, instr.length);
-		System.arraycopy(Write_Memory_Closure, 0, result, Write_Memory.length + instr.length,
+		System.arraycopy(Write_Memory_Closure, 0, result,
+				Write_Memory.length + instr.length,
 				Write_Memory_Closure.length);
 		return result;
 	}
 
 	static byte[] GlobalEraseMemory() {
-		byte[] Global_Erase_Memory = { X_SEND, 1, ERASE_MEMORY, xor(ERASE_MEMORY), X_WAIT_ACK, 0, xor(0), X_WAIT_ACK };
+		byte[] Global_Erase_Memory = { X_SEND, 1, ERASE_MEMORY,
+				xor(ERASE_MEMORY), X_WAIT_ACK, 0, xor(0), X_WAIT_ACK };
 		return Global_Erase_Memory;
 	}
 
 	static byte[] EraseMemory(byte[] pages) {
-		byte[] Erase_Memory = { X_SEND, 1, ERASE_MEMORY, xor(ERASE_MEMORY), X_WAIT_ACK, (byte) (pages.length - 1) };
+		byte[] Erase_Memory = { X_SEND, 1, ERASE_MEMORY, xor(ERASE_MEMORY),
+				X_WAIT_ACK, (byte) (pages.length - 1) };
 		byte[] result = new byte[Erase_Memory.length + pages.length];
 		System.arraycopy(Erase_Memory, 0, result, 0, Erase_Memory.length);
 		System.arraycopy(pages, 0, result, Erase_Memory.length, pages.length);
@@ -148,10 +239,13 @@ public class Stm32Protocol {
 	}
 
 	static byte[] ExtendedEraseMemory(int[] pages) {
-		byte[] Extended_Erase_Memory = { X_SEND, 1, EXTENDED_ERASE_MEMORY, xor(EXTENDED_ERASE_MEMORY), X_WAIT_ACK,
-				X_SEND, (byte) (pages.length - 1) };
-		byte[] result = new byte[Extended_Erase_Memory.length + pages.length * 2 + 4];
-		System.arraycopy(Extended_Erase_Memory, 0, result, 0, Extended_Erase_Memory.length);
+		byte[] Extended_Erase_Memory = { X_SEND, 1, EXTENDED_ERASE_MEMORY,
+				xor(EXTENDED_ERASE_MEMORY), X_WAIT_ACK, X_SEND,
+				(byte) (pages.length - 1) };
+		byte[] result = new byte[Extended_Erase_Memory.length + pages.length * 2
+				+ 4];
+		System.arraycopy(Extended_Erase_Memory, 0, result, 0,
+				Extended_Erase_Memory.length);
 		int offset = Extended_Erase_Memory.length;
 		byte crc;
 		crc = result[offset++] = slice(pages.length - 1, 1);
@@ -166,8 +260,8 @@ public class Stm32Protocol {
 	}
 
 	static byte[] WriteProtect(byte[] sectors) {
-		byte[] WriteProtect = { X_SEND, 1, WRITE_PROTECT, xor(WRITE_PROTECT), X_WAIT_ACK, X_SEND,
-				(byte) (sectors.length - 1) };
+		byte[] WriteProtect = { X_SEND, 1, WRITE_PROTECT, xor(WRITE_PROTECT),
+				X_WAIT_ACK, X_SEND, (byte) (sectors.length - 1) };
 		byte crc = (byte) (sectors.length - 1);
 		byte[] result = new byte[WriteProtect.length + sectors.length * 2 + 4];
 		System.arraycopy(WriteProtect, 0, result, 0, WriteProtect.length);
@@ -181,17 +275,20 @@ public class Stm32Protocol {
 	}
 
 	static byte[] WriteUnprotect() {
-		byte[] WriteUnprotect = { X_SEND, 1, WRITE_UNPROTECT, xor(WRITE_UNPROTECT), X_WAIT_ACK, X_WAIT_ACK };
+		byte[] WriteUnprotect = { X_SEND, 1, WRITE_UNPROTECT,
+				xor(WRITE_UNPROTECT), X_WAIT_ACK, X_WAIT_ACK };
 		return WriteUnprotect;
 	}
 
 	static byte[] ReadProtect() {
-		byte[] ReadProtect = { X_SEND, 1, READ_PROTECT, xor(READ_PROTECT), X_WAIT_ACK, X_WAIT_ACK };
+		byte[] ReadProtect = { X_SEND, 1, READ_PROTECT, xor(READ_PROTECT),
+				X_WAIT_ACK, X_WAIT_ACK };
 		return ReadProtect;
 	}
 
 	static byte[] ReadUnprotect() {
-		byte[] ReadUnprotect = { X_SEND, 1, READ_UNPROTECT, xor(READ_UNPROTECT), X_WAIT_ACK, X_WAIT_ACK };
+		byte[] ReadUnprotect = { X_SEND, 1, READ_UNPROTECT, xor(READ_UNPROTECT),
+				X_WAIT_ACK, X_WAIT_ACK };
 		return ReadUnprotect;
 	}
 
@@ -204,7 +301,8 @@ public class Stm32Protocol {
 	public static void main(String[] args) {
 		System.out.println(bytesToHex(Stm32Protocol.Get()));
 		System.out.println(bytesToHex(ReadMemory(0xFF00FF00, 256)));
-		System.out.println(bytesToHex(WriteMemory(0xA1A2A3A4, new byte[] { 1, 2, 3, 4, 5, 7, 11, 13, 15 })));
+		System.out.println(bytesToHex(WriteMemory(0xA1A2A3A4,
+				new byte[] { 1, 2, 3, 4, 5, 7, 11, 13, 15 })));
 		System.out.println(bytesToHex(ExtendedEraseMemory(new int[] { 1, 2 })));
 	}
 

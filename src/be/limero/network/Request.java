@@ -6,7 +6,7 @@ import be.limero.util.Slip;
 
 public class Request {
 	static public enum Cmd {
-		PING, EXEC, RESET, MODE_BOOTLOADER, MODE_USER,STM32_OUTPUT,LOG_OUTPUT
+		PING, EXEC, RESET, MODE_BOOTLOADER, MODE_USER, STM32_OUTPUT, LOG_OUTPUT
 	};
 
 	public Cmd _cmd;
@@ -31,6 +31,12 @@ public class Request {
 		_data = new Bytes(data);
 	}
 
+	public Request(Cmd cmd, int id, byte[] data) {
+		_cmd = cmd;
+		_id = id;
+		_data = new Bytes(data);
+	}
+
 	// <cmd><id:int><data:bytes>
 	public Cbor toCbor() {
 		Cbor cbor = new Cbor(512);
@@ -44,9 +50,9 @@ public class Request {
 		return String.format(" cmd : %s ,id : %s, data : %s ", _cmd.toString(),
 				_id, _data.toHex());
 	}
-	
+
 	public Bytes toSlip() {
-		Bytes bytes=new Bytes(1024);
+		Bytes bytes = new Bytes(1024);
 		bytes = toCbor();
 		Slip.addCrc(bytes);
 		bytes = Slip.encode(bytes);

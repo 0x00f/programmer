@@ -248,7 +248,7 @@ public class Stm32Programmer extends JFrame {
 		JButton btnGet = new JButton("Get");
 		btnGet.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				controller.tell("getVersion", null);
+				controller.tell("get", null);
 			}
 		});
 		btnGet.setBounds(192, 121, 89, 23);
@@ -267,7 +267,7 @@ public class Stm32Programmer extends JFrame {
 			public void run() {
 
 				if (model.getConnected()) {
-					getBtnConnect().setText("Dicsonnect");
+					getBtnConnect().setText("Disconnect");
 				} else {
 					getBtnConnect().setText("Connect");
 				}

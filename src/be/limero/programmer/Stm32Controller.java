@@ -11,6 +11,7 @@ import akka.event.LoggingAdapter;
 import be.limero.network.Request;
 import be.limero.network.UdpPipe;
 import be.limero.programmer.ui.Stm32Programmer;
+import be.limero.util.Bytes;
 import be.limero.util.Cbor;
 import be.limero.util.Slip;
 
@@ -19,6 +20,13 @@ public class Stm32Controller extends UntypedActor {
 
 	ActorRef proxy;
 	Slip slip;
+	Stm32Protocol stm32Protocol = new Stm32Protocol();
+
+	enum Route {
+		RESET, EXEC_GET, EXEC_GET_ID, EXEC_GET_VERSION, EXEC_READ_MEMORY, EXEC_WRITE_MEMORY, //
+		EXEC_GO, EXEC_ERASE_MEMORY, EXEC_EXTENDED_ERASE_MEMORY, EXEC_WRITE_PROTECT, //
+		EXEC_WRITE_UNPROTECT, EXEC_READ_PROTECT, EXEC_READ_UNPROTECT
+	};
 
 	boolean _tcpConnected = false;
 
@@ -26,6 +34,7 @@ public class Stm32Controller extends UntypedActor {
 	Stm32Model model;
 	Stm32Programmer ui;
 	InetSocketAddress remote = new InetSocketAddress("192.168.0.131", 23);
+	Bytes binFile;
 
 	public Stm32Controller(Stm32Programmer frame, Stm32Model model) {
 
@@ -33,11 +42,9 @@ public class Stm32Controller extends UntypedActor {
 		slip = new Slip(1024);
 		ui = frame;
 		ui.updateView();
-		proxy = ActorSystem.create("System").actorOf(Props.create(UdpPipe.class), "Proxy-UdpPipe");
-		/*
-		 * tcp = ActorSystem.create("MySystem")
-		 * .actorOf(Props.create(TcpClient.class));
-		 */
+		proxy = ActorSystem.create("System")
+				.actorOf(Props.create(UdpPipe.class), "Proxy-UdpPipe");
+		binFile = new Bytes(256000);
 	}
 
 	public void getModelFromView() {
@@ -54,11 +61,13 @@ public class Stm32Controller extends UntypedActor {
 	}
 
 	public void reset() {
-		proxy.tell(new Request(Request.Cmd.RESET, new byte[] {}).toCbor(), getSelf());
+		proxy.tell(new Request(Request.Cmd.RESET, new byte[] {}).toCbor(),
+				getSelf());
 	}
 
-	public void sendCommand(byte[] msg) {
-		proxy.tell(new Request(Request.Cmd.EXEC, msg).toCbor(), self());
+	public void sendCommand(Cmd id,Request.Cmd cmd,byte[] msg) {
+		Request req = new Request(cmd,id.ordinal(), msg);
+		proxy.tell(req.toCbor(), self());
 	}
 
 	public Stm32Model getModel() {
@@ -79,22 +88,12 @@ public class Stm32Controller extends UntypedActor {
 
 	@Override
 	public void onReceive(Object msg) throws Exception {
-		log.info(" class = " + msg.getClass().getName() + "  msg = " + msg + " sender : " + sender());
+		log.info(" class = " + msg.getClass().getName() + "  msg = " + msg
+				+ " sender : " + sender());
 		if (msg instanceof Cbor) {
+			Cbor cbor = (Cbor) msg;
+			onResponse(cbor);
 
-			/*
-			 * Tcp.Received rcv = (Tcp.Received) msg; byte[] arr =
-			 * rcv.data().toArray(); Bytes bytes = new Bytes(arr); while
-			 * (bytes.hasData()) { if (slip.fill(bytes.read())) { if
-			 * (Slip.isGoodCrc(slip)) { Slip.removeCrc(slip); slip.offset(0);
-			 * Cbor cbor = new Cbor(1025); while (slip.hasData()) {
-			 * cbor.write(slip.read()); } log.info("cbor =" + cbor.toString());
-			 * cbor.offset(0); int cmd = cbor.getInteger(); if (cmd ==
-			 * Request.Cmd.LOG_OUTPUT.ordinal()) { cbor.getInteger();
-			 * cbor.getInteger(); Bytes byt = cbor.getBytes(); String line = new
-			 * String(byt.bytes(), "UTF-8"); log.info(" log " + line);
-			 * model.setLog(model.getLog() + "\n" + line); } } slip.reset(); }
-			 */
 		} else if (msg instanceof String) {
 
 			switch ((String) msg) {
@@ -113,7 +112,7 @@ public class Stm32Controller extends UntypedActor {
 				break;
 			}
 			case "go": {
-				sendCommand(Stm32Protocol.Go(0x8000000));
+				sendCommand(Cmd.EXEC_GO,Request.Cmd.EXEC,Stm32Protocol.Go(0x8000000));
 				break;
 			}
 			case "get": {
@@ -159,14 +158,13 @@ public class Stm32Controller extends UntypedActor {
 			case "read": {
 				int start = 0x8000000;
 				sendCommand(Stm32Protocol.ReadMemory(start, 256));
-				sendCommand(Stm32Protocol.ReadMemory(start + 256, 256));
 				break;
 			}
 			case "program": {
 				int start = 0x8000000;
 				byte[] data = new byte[256];
 				for (int i = 0; i < 256; i++)
-					data[i] = (byte) (255 - i);
+					data[i] = binFile.read();
 				sendCommand(Stm32Protocol.WriteMemory(start, data));
 				break;
 			}
@@ -174,6 +172,17 @@ public class Stm32Controller extends UntypedActor {
 			}
 		}
 		ui.updateView();
+	}
+
+	void onResponse(Cbor cbor) {
+		cbor.offset(0);
+		int cmd = cbor.getInteger();
+		int id = cbor.getInteger();
+		int error = cbor.getInteger();
+		Bytes bytes = cbor.getBytes();
+		log.info(" reply : cmd=" + cmd + " id=" + id + " error=" + error
+				+ " bytes=" + bytes.toHex());
+
 	}
 
 }
