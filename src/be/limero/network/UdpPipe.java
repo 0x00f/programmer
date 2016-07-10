@@ -25,10 +25,9 @@ public class UdpPipe extends UntypedActor {
 
 		// request creation of a SimpleSender
 		mgr = Udp.get(getContext().system()).getManager();
-		local = new InetSocketAddress(3881);
+		local = new InetSocketAddress("0.0.0.0", 3881);
 
-		//		mgr.tell(UdpMessage.bind(getSelf(),
-		//				new InetSocketAddress("localhost", 3881)), getSelf());
+		//				mgr.tell(UdpMessage.bind(getSelf(),local), getSelf());
 		//		mgr.tell(UdpMessage.simpleSender(), getSelf());
 	}
 
@@ -51,6 +50,7 @@ public class UdpPipe extends UntypedActor {
 			Cbor cbor = (Cbor) msg;
 			nextActor = sender();
 			log.info(" sending Cbor : " + cbor.toString() + " to " + remote);
+			udpReceiver.tell(UdpMessage.noAck(), getSelf());
 			udpReceiver.tell(
 					UdpMessage.send(ByteString.fromArray(cbor.bytes()), remote),
 					getSelf());
