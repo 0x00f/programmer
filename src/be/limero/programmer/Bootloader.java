@@ -160,7 +160,7 @@ public class Bootloader {
 	static class GetId {
 		byte[] pid;
 
-		byte[] request() {
+		static byte[] request() {
 			return new byte[] { X_SEND, 1, GET_ID, xor(GET_ID), X_WAIT_ACK, X_RECV_VAR, X_RECV, 2, X_WAIT_ACK };
 		}
 

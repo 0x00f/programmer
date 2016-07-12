@@ -6,6 +6,7 @@ import java.util.stream.Stream;
 import be.limero.network.Reply;
 import be.limero.network.Request;
 import be.limero.network.Request.Cmd;
+import be.limero.programmer.Stm32Controller.Route;
 import be.limero.util.Cbor;
 
 public class Exchange {
@@ -15,6 +16,7 @@ public class Exchange {
 	long created;
 	Request request;
 	Reply reply;
+	Route route;
 	FunctionalInterface f;
 	java.util.function.Consumer<Cbor> handler;
 
@@ -29,9 +31,23 @@ public class Exchange {
 		id = req._id;
 		handler = hdlr;
 	}
+	
+	Exchange(Request req,Route rte) {
+		request = req;
+		created = System.currentTimeMillis();
+		reply = null;
+		id = req._id;
+		route = rte;
+	}
 
 	static void create(Request req, java.util.function.Consumer<Cbor> hdlr) {
 		Exchange exchange = new Exchange(req, hdlr);
+		list.put(req._id, exchange);
+		exchange.handler.accept(null);
+	}
+	
+	static void create(Request req, Route route) {
+		Exchange exchange = new Exchange(req, route);
 		list.put(req._id, exchange);
 		exchange.handler.accept(null);
 	}

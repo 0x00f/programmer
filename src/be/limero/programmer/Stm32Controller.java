@@ -43,8 +43,7 @@ public class Stm32Controller extends UntypedActor {
 		slip = new Slip(1024);
 		ui = frame;
 		ui.updateView();
-		proxy = ActorSystem.create("System")
-				.actorOf(Props.create(UdpPipe.class), "Proxy-UdpPipe");
+		proxy = ActorSystem.create("System").actorOf(Props.create(UdpPipe.class), "Proxy-UdpPipe");
 		binFile = new Bytes(256000);
 	}
 
@@ -62,21 +61,21 @@ public class Stm32Controller extends UntypedActor {
 	}
 
 	public void reset() {
-		proxy.tell(new Request(Request.Cmd.RESET, new byte[] {}).toCbor(),
-				getSelf());
+		proxy.tell(new Request(Request.Cmd.RESET, new byte[] {}).toCbor(), getSelf());
 	}
-	
+
 	void onReplyGetId(Cbor reply) {
 		Stm32Protocol proto = new Stm32Protocol();
-		if ( proto.ParseGetId(reply) ) {
+		if (proto.ParseGetId(reply)) {
 			model.setBootloaderVersion(proto.version);
 		}
 	}
 
-	public void sendCommand(Request.Cmd cmd,byte[] msg) {
-		
+	public void sendCommand(Request.Cmd cmd, byte[] msg) {
+
 		Request req = new Request(cmd, msg);
-		Exchange.create(req, (reply)->onReplyGetId(reply));
+		Exchange.create(req, Route.EXEC_GET_ID);
+		Exchange.create(req, (reply) -> onReplyGetId(reply));
 		proxy.tell(req.toCbor(), self());
 	}
 
@@ -98,8 +97,7 @@ public class Stm32Controller extends UntypedActor {
 
 	@Override
 	public void onReceive(Object msg) throws Exception {
-		log.info(" class = " + msg.getClass().getName() + "  msg = " + msg
-				+ " sender : " + sender());
+		log.info(" class = " + msg.getClass().getName() + "  msg = " + msg + " sender : " + sender());
 		if (msg instanceof Cbor) {
 			Cbor cbor = (Cbor) msg;
 			onResponse(cbor);
@@ -122,52 +120,52 @@ public class Stm32Controller extends UntypedActor {
 				break;
 			}
 			case "go": {
-				sendCommand(Route.EXEC_GO,Request.Cmd.EXEC,Stm32Protocol.Go(0x8000000));
+				sendCommand(Request.Cmd.EXEC, Stm32Protocol.Go(0x8000000));
 				break;
 			}
 			case "get": {
-				sendCommand(Stm32Protocol.Get());
+				sendCommand(Request.Cmd.EXEC, Stm32Protocol.Get());
 				break;
 			}
 			case "getId": {
-				sendCommand(Stm32Protocol.GetId());
+				sendCommand(Request.Cmd.EXEC, Stm32Protocol.GetId());
 				break;
 			}
 			case "getVersion": {
-				sendCommand(Stm32Protocol.GetVersion());
+				sendCommand(Request.Cmd.EXEC, Stm32Protocol.GetVersion());
 				break;
 			}
 			case "globalErase": {
-				sendCommand(Stm32Protocol.GlobalEraseMemory());
+				sendCommand(Request.Cmd.EXEC, Stm32Protocol.GlobalEraseMemory());
 				break;
 			}
 			case "eraseMemory": {
-				sendCommand(Stm32Protocol.EraseMemory(new byte[2]));
+				sendCommand(Request.Cmd.EXEC, Stm32Protocol.EraseMemory(new byte[2]));
 				break;
 			}
 			case "extendedEraseMemory": {
-				sendCommand(Stm32Protocol.ExtendedEraseMemory(new int[2]));
+				sendCommand(Request.Cmd.EXEC, Stm32Protocol.ExtendedEraseMemory(new int[2]));
 				break;
 			}
 			case "writeProtect": {
-				sendCommand(Stm32Protocol.WriteProtect(new byte[2]));
+				sendCommand(Request.Cmd.EXEC, Stm32Protocol.WriteProtect(new byte[2]));
 				break;
 			}
 			case "writeUnProtect": {
-				sendCommand(Stm32Protocol.WriteUnprotect());
+				sendCommand(Request.Cmd.EXEC, Stm32Protocol.WriteUnprotect());
 				break;
 			}
 			case "readProtect": {
-				sendCommand(Stm32Protocol.ReadProtect());
+				sendCommand(Request.Cmd.EXEC, Stm32Protocol.ReadProtect());
 				break;
 			}
 			case "readUnProtect": {
-				sendCommand(Stm32Protocol.ReadUnprotect());
+				sendCommand(Request.Cmd.EXEC, Stm32Protocol.ReadUnprotect());
 				break;
 			}
 			case "read": {
 				int start = 0x8000000;
-				sendCommand(Stm32Protocol.ReadMemory(start, 256));
+				sendCommand(Request.Cmd.EXEC, Stm32Protocol.ReadMemory(start, 256));
 				break;
 			}
 			case "program": {
@@ -175,7 +173,7 @@ public class Stm32Controller extends UntypedActor {
 				byte[] data = new byte[256];
 				for (int i = 0; i < 256; i++)
 					data[i] = binFile.read();
-				sendCommand(Stm32Protocol.WriteMemory(start, data));
+				sendCommand(Request.Cmd.EXEC, Stm32Protocol.WriteMemory(start, data));
 				break;
 			}
 
@@ -190,8 +188,7 @@ public class Stm32Controller extends UntypedActor {
 		int id = cbor.getInteger();
 		int error = cbor.getInteger();
 		Bytes bytes = cbor.getBytes();
-		log.info(" reply : cmd=" + cmd + " id=" + id + " error=" + error
-				+ " bytes=" + bytes.toHex());
+		log.info(" reply : cmd=" + cmd + " id=" + id + " error=" + error + " bytes=" + bytes.toHex());
 
 	}
 
