@@ -9,6 +9,7 @@ import akka.actor.UntypedActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import be.limero.network.Request;
+import be.limero.network.Request.Cmd;
 import be.limero.network.UdpPipe;
 import be.limero.programmer.ui.Stm32Programmer;
 import be.limero.util.Bytes;
@@ -64,9 +65,18 @@ public class Stm32Controller extends UntypedActor {
 		proxy.tell(new Request(Request.Cmd.RESET, new byte[] {}).toCbor(),
 				getSelf());
 	}
+	
+	void onReplyGetId(Cbor reply) {
+		Stm32Protocol proto = new Stm32Protocol();
+		if ( proto.ParseGetId(reply) ) {
+			model.setBootloaderVersion(proto.version);
+		}
+	}
 
-	public void sendCommand(Cmd id,Request.Cmd cmd,byte[] msg) {
-		Request req = new Request(cmd,id.ordinal(), msg);
+	public void sendCommand(Request.Cmd cmd,byte[] msg) {
+		
+		Request req = new Request(cmd, msg);
+		Exchange.create(req, (reply)->onReplyGetId(reply));
 		proxy.tell(req.toCbor(), self());
 	}
 
@@ -112,7 +122,7 @@ public class Stm32Controller extends UntypedActor {
 				break;
 			}
 			case "go": {
-				sendCommand(Cmd.EXEC_GO,Request.Cmd.EXEC,Stm32Protocol.Go(0x8000000));
+				sendCommand(Route.EXEC_GO,Request.Cmd.EXEC,Stm32Protocol.Go(0x8000000));
 				break;
 			}
 			case "get": {

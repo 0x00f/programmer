@@ -12,7 +12,11 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Libraries"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Lombok"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Lombok">
+		<accessrules>
+			<accessrule kind="accessible" pattern="*"/>
+		</accessrules>
+	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.m2e.MAVEN2_CLASSPATH_CONTAINER">
 		<attributes>
 			<attribute name="maven.pomderived" value="true"/>

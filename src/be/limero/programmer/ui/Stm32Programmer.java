@@ -81,7 +81,7 @@ public class Stm32Programmer extends JFrame {
 				model.setHost(txtHost.getText());
 			}
 		});
-		txtHost.setText("esp8266.local");
+		txtHost.setText("192.168.0.132");
 		txtHost.setBounds(90, 8, 249, 20);
 		contentPane.add(txtHost);
 		txtHost.setColumns(10);

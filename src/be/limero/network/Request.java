@@ -8,6 +8,8 @@ public class Request {
 	static public enum Cmd {
 		PING, EXEC, RESET, MODE_BOOTLOADER, MODE_USER, STM32_OUTPUT, LOG_OUTPUT
 	};
+	
+
 
 	public Cmd _cmd;
 	public int _id = 1;

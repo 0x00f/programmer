@@ -1,7 +1,5 @@
 package be.limero.programmer;
 
-import java.util.HashMap;
-
 import be.limero.util.Bytes;
 
 /*
@@ -20,6 +18,8 @@ import be.limero.util.Bytes;
 */
 
 public class Stm32Protocol {
+	
+
 
 	static final byte X_WAIT_ACK = 0x40; // wait for ACK
 	static final byte X_SEND = 0x41; // send fixed size length
@@ -31,6 +31,8 @@ public class Stm32Protocol {
 												// of
 												// rest
 												// to receive
+	static final byte X_RESET_BOOTLOADER = 0x45;
+	static final byte X_RESET_RUN = 0x46;
 
 	public static final byte GET = 0;
 	public static final byte GET_VERSION = 1;
