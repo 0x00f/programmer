@@ -158,13 +158,13 @@ public class Bootloader {
 	}
 
 	static class GetId {
-		byte[] pid;
+		static byte[] pid;
 
 		static byte[] request() {
 			return new byte[] { X_SEND, 1, GET_ID, xor(GET_ID), X_WAIT_ACK, X_RECV_VAR, X_RECV, 2, X_WAIT_ACK };
 		}
 
-		boolean parse(Bytes reply) {
+		static boolean parse(Bytes reply) {
 			if (reply.read() != ACK)
 				return false;
 			int length = (reply.read() & 0xFF) + 1;

@@ -75,7 +75,7 @@ public class Stm32Controller extends UntypedActor {
 
 		Request req = new Request(cmd, msg);
 		Exchange.create(req, Route.EXEC_GET_ID);
-		Exchange.create(req, (reply) -> onReplyGetId(reply));
+//		Exchange.create(req, (reply) -> onReplyGetId(reply));
 		proxy.tell(req.toCbor(), self());
 	}
 
@@ -101,6 +101,7 @@ public class Stm32Controller extends UntypedActor {
 		if (msg instanceof Cbor) {
 			Cbor cbor = (Cbor) msg;
 			onResponse(cbor);
+			
 
 		} else if (msg instanceof String) {
 
@@ -189,7 +190,14 @@ public class Stm32Controller extends UntypedActor {
 		int error = cbor.getInteger();
 		Bytes bytes = cbor.getBytes();
 		log.info(" reply : cmd=" + cmd + " id=" + id + " error=" + error + " bytes=" + bytes.toHex());
-
+		Exchange exchange=Exchange.find(id);
+		switch(exchange.route) {
+		case EXEC_GET_ID :{
+			Bootloader.GetId.parse(bytes);
+			model.setChipId(Bootloader.GetId.pid[0]);
+			break;
+		}
+		}
 	}
 
 }

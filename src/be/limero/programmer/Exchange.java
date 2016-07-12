@@ -31,8 +31,8 @@ public class Exchange {
 		id = req._id;
 		handler = hdlr;
 	}
-	
-	Exchange(Request req,Route rte) {
+
+	Exchange(Request req, Route rte) {
 		request = req;
 		created = System.currentTimeMillis();
 		reply = null;
@@ -43,21 +43,21 @@ public class Exchange {
 	static void create(Request req, java.util.function.Consumer<Cbor> hdlr) {
 		Exchange exchange = new Exchange(req, hdlr);
 		list.put(req._id, exchange);
-		exchange.handler.accept(null);
+//		exchange.handler.accept(null);
 	}
-	
+
 	static void create(Request req, Route route) {
 		Exchange exchange = new Exchange(req, route);
 		list.put(req._id, exchange);
-		exchange.handler.accept(null);
+//		exchange.handler.accept(null);
 	}
 
 	static void delete(int id) {
 		list.remove(id);
 	}
-	
-	static void findAndHandle(Cbor reply)  {
-		
+
+	static Exchange find(int id) {
+		return list.get(id);
 	}
 
 	public static void main(String[] args) {
