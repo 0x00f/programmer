@@ -14,6 +14,7 @@ public class UdpVerticle extends AbstractVerticle {
 	private final static Logger log = LoggerFactory.getLogger(UdpVerticle.class);
 	DatagramSocket socket;
 	EventBus eb;
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -21,15 +22,15 @@ public class UdpVerticle extends AbstractVerticle {
 	 */
 	@Override
 	public void start() throws Exception {
-		 eb = vertx.eventBus();
+		eb = vertx.eventBus();
 
 		super.start();
 		socket = vertx.createDatagramSocket(new DatagramSocketOptions());
 		socket.listen(3881, "0.0.0.0", asyncResult -> {
 			if (asyncResult.succeeded()) {
 				socket.handler(packet -> {
-					eb.send("controller",packet.data());
-					log.info("Msg received "+packet.toString());
+					eb.send("controller", packet.data());
+					log.info("Msg received " + packet.toString());
 				});
 			} else {
 				log.info("Listen failed" + asyncResult.cause());
@@ -41,13 +42,12 @@ public class UdpVerticle extends AbstractVerticle {
 			log.info("Send succeeded? " + asyncResult.succeeded());
 		});
 
-
 		eb.consumer("udp", message -> {
-			if ( message.body() instanceof JsonObject ) {
+			if (message.body() instanceof JsonObject) {
 				log.info(" received json ");
-			};
-			log.info("I have received a EB message: " + message.body() );
-			message.address();
+			}
+			log.info("I have received a EB message: " + message.body());
+			message.reply(message);
 		});
 
 	}
