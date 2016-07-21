@@ -1,19 +1,20 @@
 package be.limero.network;
 
+import java.util.Arrays;
+
 import be.limero.util.Bytes;
 import be.limero.util.Cbor;
 import be.limero.util.Slip;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.base64.Base64;
+import io.vertx.core.json.JsonObject;
 
 public class Request {
-	static public enum Cmd {
-		PING, EXEC, RESET, MODE_BOOTLOADER, MODE_USER, STM32_OUTPUT, LOG_OUTPUT
-	};
-	
 
-
-	public Cmd _cmd;
-	public int _id = 1;
-	public Bytes _data;
+	public String cmd;
+	public int id = 1;
+	public Bytes data;
 
 	static int messageId = 1;
 
@@ -22,35 +23,34 @@ public class Request {
 	}
 
 	Request() {
-		_cmd = Cmd.PING;
-		_id = nextId();
-		_data = new Bytes(256);
+		cmd = "";
+		id = nextId();
+		data = new Bytes(256);
 	}
 
-	public Request(Cmd cmd, byte[] data) {
-		_cmd = cmd;
-		_id = nextId();
-		_data = new Bytes(data);
+	public Request(String cd, byte[] data) {
+		cmd = cd;
+		id = nextId();
+		this.data = new Bytes(data);
 	}
 
-	public Request(Cmd cmd, int id, byte[] data) {
-		_cmd = cmd;
-		_id = id;
-		_data = new Bytes(data);
+	public Request(String cmd, int id, byte[] data) {
+		this.cmd = cmd;
+		this.id = id;
+		this.data = new Bytes(data);
 	}
 
 	// <cmd><id:int><data:bytes>
 	public Cbor toCbor() {
 		Cbor cbor = new Cbor(512);
-		cbor.add(_cmd.ordinal());
-		cbor.add(_id);
-		cbor.add(_data);
+		cbor.add(cmd);
+		cbor.add(id);
+		cbor.add(data);
 		return cbor;
 	}
 
 	public String toString() {
-		return String.format(" cmd : %s ,id : %s, data : %s ", _cmd.toString(),
-				_id, _data.toHex());
+		return String.format(" cmd : %s ,id : %s, data : %s ", cmd, id, data.toHex());
 	}
 
 	public Bytes toSlip() {
@@ -59,6 +59,26 @@ public class Request {
 		Slip.addCrc(bytes);
 		bytes = Slip.encode(bytes);
 		return bytes;
+	}
+
+	public JsonObject toJson() {
+		JsonObject json = new JsonObject();
+		json.put("id", id);
+		ByteBuf base64 = Base64.encode(Unpooled.copiedBuffer(data.bytes()));
+		StringBuilder sb=new StringBuilder();
+		while( base64.readableBytes()>0) {
+			sb.append((char)base64.readByte());
+		}
+		json.put("data", sb.toString());
+		json.put("cmd", cmd);
+		return json;
+	}
+
+	/**
+	 * @return the id
+	 */
+	public int getId() {
+		return id;
 	}
 
 }

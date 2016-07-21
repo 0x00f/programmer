@@ -28,7 +28,7 @@ public class Exchange {
 		request = req;
 		created = System.currentTimeMillis();
 		reply = null;
-		id = req._id;
+		id = req.id;
 		handler = hdlr;
 	}
 
@@ -36,19 +36,19 @@ public class Exchange {
 		request = req;
 		created = System.currentTimeMillis();
 		reply = null;
-		id = req._id;
+		id = req.id;
 		route = rte;
 	}
 
 	static void create(Request req, java.util.function.Consumer<Cbor> hdlr) {
 		Exchange exchange = new Exchange(req, hdlr);
-		list.put(req._id, exchange);
+		list.put(req.id, exchange);
 //		exchange.handler.accept(null);
 	}
 
 	static void create(Request req, Route route) {
 		Exchange exchange = new Exchange(req, route);
-		list.put(req._id, exchange);
+		list.put(req.id, exchange);
 //		exchange.handler.accept(null);
 	}
 

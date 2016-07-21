@@ -17,11 +17,10 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import be.limero.programmer.Stm32Controller;
 import be.limero.programmer.Stm32Model;
+import be.limero.vertx.Controller;
+import javax.swing.JScrollPane;
+import java.awt.Font;
 
 public class Stm32Programmer extends JFrame {
 
@@ -29,7 +28,9 @@ public class Stm32Programmer extends JFrame {
 	private JTextField txtHost;
 	private JTextField txtBinaryFile;
 	private Stm32Model model;
-	private ActorRef controller;
+	private LogHandler logHandler;
+	// private EventBus eb = Vertx.factory.vertx().eventBus();
+	private Controller controller;
 	private JLabel lblDeviceInfo;
 	private JRadioButton rdbtnReset;
 	private JRadioButton rdbtnProgram;
@@ -63,8 +64,11 @@ public class Stm32Programmer extends JFrame {
 	 */
 	public Stm32Programmer() {
 
+		model = new Stm32Model();
+		controller = new Controller(this, model);
+
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 950, 602);
+		setBounds(100, 100, 716, 477);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
@@ -81,8 +85,8 @@ public class Stm32Programmer extends JFrame {
 				model.setHost(txtHost.getText());
 			}
 		});
-		txtHost.setText("192.168.0.132");
-		txtHost.setBounds(90, 8, 249, 20);
+		txtHost.setText("iot.eclipse.org");
+		txtHost.setBounds(90, 8, 141, 20);
 		contentPane.add(txtHost);
 		txtHost.setColumns(10);
 
@@ -90,33 +94,27 @@ public class Stm32Programmer extends JFrame {
 		btnConnect.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				if (model.getConnected())
-					controller.tell("disconnect", ActorRef.noSender());
-				else
-				{
+					controller.send("disconnect");
+				else {
 					model.setHost(txtHost.getText());
 					model.setPort(Integer.valueOf(textPort.getText()));
-					controller.tell("connect", ActorRef.noSender());
+					controller.send("connect");
 				}
 			}
 		});
-		btnConnect.setBounds(462, 7, 148, 23);
+		btnConnect.setBounds(349, 7, 109, 23);
 		contentPane.add(btnConnect);
 
 		lblStatus = new JLabel("Status");
-		lblStatus.setBounds(10, 539, 914, 14);
+		lblStatus.setBounds(10, 421, 688, 14);
 		contentPane.add(lblStatus);
 
 		progressBar = new JProgressBar();
-		progressBar.setBounds(10, 517, 914, 14);
+		progressBar.setBounds(10, 396, 688, 14);
 		contentPane.add(progressBar);
 
-		txtLogging = new JTextArea();
-		txtLogging.setText("Logging");
-		txtLogging.setBounds(10, 177, 914, 329);
-		contentPane.add(txtLogging);
-
 		txtBinaryFile = new JTextField();
-		txtBinaryFile.setBounds(90, 42, 518, 20);
+		txtBinaryFile.setBounds(90, 39, 386, 20);
 		contentPane.add(txtBinaryFile);
 		txtBinaryFile.setColumns(10);
 
@@ -131,56 +129,56 @@ public class Stm32Programmer extends JFrame {
 
 			}
 		});
-		btnBrowse.setBounds(659, 41, 89, 23);
+		btnBrowse.setBounds(486, 38, 89, 23);
 		contentPane.add(btnBrowse);
 
 		JButton btnReset = new JButton("Reset");
 		btnReset.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				controller.tell("reset", null);
+				controller.send("reset");
 			}
 		});
-		btnReset.setBounds(10, 70, 89, 23);
+		btnReset.setBounds(10, 70, 63, 23);
 		contentPane.add(btnReset);
 
 		JButton btnGo = new JButton("Go");
 		btnGo.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				controller.tell("go", null);
+				controller.send("go");
 			}
 		});
-		btnGo.setBounds(109, 70, 89, 23);
+		btnGo.setBounds(81, 70, 56, 23);
 		contentPane.add(btnGo);
 
 		JButton btnProgram = new JButton("Program");
 		btnProgram.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				controller.tell("program", null);
+				controller.send("program");
 			}
 		});
-		btnProgram.setBounds(208, 70, 89, 23);
+		btnProgram.setBounds(147, 70, 75, 23);
 		contentPane.add(btnProgram);
 
 		JButton btnRead = new JButton("Read");
 		btnRead.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				controller.tell("read", null);
+				controller.send("read");
 			}
 		});
-		btnRead.setBounds(307, 70, 89, 23);
+		btnRead.setBounds(232, 70, 63, 23);
 		contentPane.add(btnRead);
 
 		JButton btnVerify = new JButton("Verify");
 		btnVerify.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				controller.tell("verify", null);
+				controller.send("verify");
 			}
 		});
-		btnVerify.setBounds(406, 70, 89, 23);
+		btnVerify.setBounds(305, 70, 70, 23);
 		contentPane.add(btnVerify);
 
 		JButton btnDoItAll = new JButton("Do it all");
-		btnDoItAll.setBounds(505, 70, 89, 23);
+		btnDoItAll.setBounds(385, 70, 89, 23);
 		contentPane.add(btnDoItAll);
 
 		rdbtnReset = new JRadioButton("Reset");
@@ -196,7 +194,7 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(rdbtnVerify);
 
 		rdbtnGo = new JRadioButton("Go");
-		rdbtnGo.setBounds(600, 147, 109, 23);
+		rdbtnGo.setBounds(600, 41, 109, 23);
 		contentPane.add(rdbtnGo);
 
 		lblDeviceInfo = new JLabel("BootloaderVersion");
@@ -206,7 +204,7 @@ public class Stm32Programmer extends JFrame {
 		JButton btnEnterBootloader = new JButton("Bootloader init");
 		btnEnterBootloader.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				controller.tell("enterBootloader", null);
+				controller.send("enterBootloader");
 			}
 		});
 		btnEnterBootloader.setBounds(10, 121, 172, 23);
@@ -215,7 +213,7 @@ public class Stm32Programmer extends JFrame {
 		JButton btnGetid = new JButton("GetID");
 		btnGetid.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				controller.tell("getId", null);
+				controller.send("getId");
 			}
 		});
 		btnGetid.setBounds(291, 121, 89, 23);
@@ -224,14 +222,15 @@ public class Stm32Programmer extends JFrame {
 		JButton btnGetversioncommands = new JButton("GetVersionCommands");
 		btnGetversioncommands.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				controller.tell("getVersion", null);
+				controller.send("getVersion");
 			}
 		});
 		btnGetversioncommands.setBounds(390, 121, 150, 23);
 		contentPane.add(btnGetversioncommands);
 
 		JLabel lblPort = new JLabel("Port");
-		lblPort.setBounds(349, 11, 46, 14);
+		lblPort.setHorizontalAlignment(SwingConstants.RIGHT);
+		lblPort.setBounds(235, 11, 46, 14);
 		contentPane.add(lblPort);
 
 		textPort = new JTextField();
@@ -240,29 +239,33 @@ public class Stm32Programmer extends JFrame {
 				model.setPort(Integer.valueOf(textPort.getText()));
 			}
 		});
-		textPort.setText("3881");
-		textPort.setBounds(406, 8, 46, 20);
+		textPort.setText("1883");
+		textPort.setBounds(293, 8, 46, 20);
 		contentPane.add(textPort);
 		textPort.setColumns(10);
-		
+
 		JButton btnGet = new JButton("Get");
 		btnGet.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				controller.tell("get", null);
+				controller.send("get");
 			}
 		});
 		btnGet.setBounds(192, 121, 89, 23);
 		contentPane.add(btnGet);
-
-		model = new Stm32Model();
-		controller = ActorSystem.create("System").actorOf(Props.create(Stm32Controller.class, this, model),
-				"Stm32Controller");
+		
+		JScrollPane scrollPane = new JScrollPane();
+		scrollPane.setBounds(10, 162, 688, 223);
+		contentPane.add(scrollPane);
+		
+				txtLogging = new JTextArea();
+				txtLogging.setFont(new Font("Monospaced", Font.PLAIN, 11));
+				scrollPane.setViewportView(txtLogging);
+				txtLogging.setText("Logging");
 
 	}
 
 	public void updateView() {
 		EventQueue.invokeLater(new Runnable() {
-
 
 			public void run() {
 

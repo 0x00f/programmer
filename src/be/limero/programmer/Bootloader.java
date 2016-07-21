@@ -43,6 +43,9 @@ public class Bootloader {
 	public static final byte WRITE_MEMORY = 0x31;
 	public static final byte ERASE_MEMORY = 0x41;
 	public static final byte EXTENDED_ERASE_MEMORY = 0x44;
+	public static final byte RESET = 0x45;
+	public static final byte BOOT0 = 0x46;
+	
 	public static final byte WRITE_PROTECT = 0x63;
 	public static final byte WRITE_UNPROTECT = 0x73;
 	public static final byte READ_PROTECT = (byte) 0x82;
@@ -105,14 +108,32 @@ public class Bootloader {
 			x ^= arr[offset + i];
 		return x;
 	}
-
-	static class Get {
+	
+	public static class Reset {
 		@Getter
 		static byte version;
 		@Getter
 		static byte[] commands;
 
-		static byte[] request() {
+		public static byte[] request() {
+			return new byte[] { X_RESET_BOOTLOADER };
+		}
+
+		static boolean parse(Bytes reply) {
+			
+			return true;
+
+		}
+
+	}
+
+	public static class Get {
+		@Getter
+		static byte version;
+		@Getter
+		static byte[] commands;
+
+		public static byte[] request() {
 			return new byte[] { X_SEND, 1, GET, xor(GET), X_WAIT_ACK, X_RECV_VAR, X_WAIT_ACK };
 		}
 
@@ -135,11 +156,11 @@ public class Bootloader {
 
 	}
 
-	static class GetVersion {
+	public static class GetVersion {
 		@Getter
 		byte version;
 
-		byte[] request() {
+		public static byte[] request() {
 			return new byte[] { X_SEND, 1, GET_VERSION, xor(GET_VERSION), X_WAIT_ACK, X_RECV, 3, X_WAIT_ACK };
 		}
 
@@ -157,10 +178,10 @@ public class Bootloader {
 		}
 	}
 
-	static class GetId {
+	public static class GetId {
 		static byte[] pid;
 
-		static byte[] request() {
+		public static byte[] request() {
 			return new byte[] { X_SEND, 1, GET_ID, xor(GET_ID), X_WAIT_ACK, X_RECV_VAR, X_RECV, 2, X_WAIT_ACK };
 		}
 
@@ -179,7 +200,7 @@ public class Bootloader {
 		}
 	}
 
-	static class ReadMemory {
+	public static class ReadMemory {
 		byte[] memory;
 
 		static byte[] request(int address, int length) {
@@ -208,7 +229,7 @@ public class Bootloader {
 		}
 	}
 
-	static class Go {
+	public static class Go {
 
 		static byte[] request(int address) {
 			return new byte[] { X_SEND, 1, GO, xor(GO), X_WAIT_ACK, X_SEND, 5, slice(address, 3), slice(address, 2), //
@@ -220,7 +241,7 @@ public class Bootloader {
 		}
 	}
 
-	static class WriteMemory {
+	public static class WriteMemory {
 		static byte[] request(int address, byte[] instr) {
 			byte[] Write_Memory = { X_SEND, 1, WRITE_MEMORY, xor(WRITE_MEMORY), X_WAIT_ACK, X_SEND, 5,
 					slice(address, 3), slice(address, 2), //
@@ -238,7 +259,7 @@ public class Bootloader {
 		}
 	}
 
-	static class GlobalEraseMemory {
+	public static class GlobalEraseMemory {
 		static byte[] request() {
 			byte[] Global_Erase_Memory = { X_SEND, 1, ERASE_MEMORY, xor(ERASE_MEMORY), X_WAIT_ACK, 0, xor(0),
 					X_WAIT_ACK };
@@ -249,7 +270,7 @@ public class Bootloader {
 		}
 	}
 
-	static class EraseMemory {
+	public static class EraseMemory {
 		static byte[] request(byte[] pages) {
 			byte[] Erase_Memory = { X_SEND, 1, ERASE_MEMORY, xor(ERASE_MEMORY), X_WAIT_ACK, (byte) (pages.length - 1) };
 			byte[] result = new byte[Erase_Memory.length + pages.length];
@@ -265,7 +286,7 @@ public class Bootloader {
 		}
 	}
 
-	static class ExtendedEraseMemory {
+	public static class ExtendedEraseMemory {
 
 		static byte[] request(int[] pages) {
 			byte[] Extended_Erase_Memory = { X_SEND, 1, EXTENDED_ERASE_MEMORY, xor(EXTENDED_ERASE_MEMORY), X_WAIT_ACK,
@@ -289,7 +310,7 @@ public class Bootloader {
 		}
 	}
 
-	static class WriteProtect {
+	public static class WriteProtect {
 
 		static byte[] request(byte[] sectors) {
 			byte[] WriteProtect = { X_SEND, 1, WRITE_PROTECT, xor(WRITE_PROTECT), X_WAIT_ACK, X_SEND,
@@ -310,7 +331,7 @@ public class Bootloader {
 		}
 	}
 
-	static class WriteUnprotect {
+	public static class WriteUnprotect {
 		static byte[] request() {
 			byte[] WriteUnprotect = { X_SEND, 1, WRITE_UNPROTECT, xor(WRITE_UNPROTECT), X_WAIT_ACK, X_WAIT_ACK };
 			return WriteUnprotect;
@@ -320,7 +341,7 @@ public class Bootloader {
 		}
 	}
 
-	static class ReadProtect {
+	public static class ReadProtect {
 		static byte[] request() {
 			byte[] ReadProtect = { X_SEND, 1, READ_PROTECT, xor(READ_PROTECT), X_WAIT_ACK, X_WAIT_ACK };
 			return ReadProtect;
@@ -330,7 +351,7 @@ public class Bootloader {
 		}
 	}
 
-	static class ReadUnprotect {
+	public static class ReadUnprotect {
 
 		static byte[] request() {
 			byte[] ReadUnprotect = { X_SEND, 1, READ_UNPROTECT, xor(READ_UNPROTECT), X_WAIT_ACK, X_WAIT_ACK };
