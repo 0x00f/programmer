@@ -203,7 +203,7 @@ public class Bootloader {
 	public static class ReadMemory {
 		byte[] memory;
 
-		static byte[] request(int address, int length) {
+		public static byte[] request(int address, int length) {
 			ASSERT(length > 0 && length < 257);
 			byte Read_Memory[] = { X_SEND, 1, READ_MEMORY, xor(READ_MEMORY), X_WAIT_ACK, //
 					X_SEND, 4, slice(address, 3), slice(address, 2), //
@@ -242,7 +242,7 @@ public class Bootloader {
 	}
 
 	public static class WriteMemory {
-		static byte[] request(int address, byte[] instr) {
+		public static byte[] request(int address, byte[] instr) {
 			byte[] Write_Memory = { X_SEND, 1, WRITE_MEMORY, xor(WRITE_MEMORY), X_WAIT_ACK, X_SEND, 5,
 					slice(address, 3), slice(address, 2), //
 					slice(address, 1), slice(address, 0), fullXor(address), X_WAIT_ACK };

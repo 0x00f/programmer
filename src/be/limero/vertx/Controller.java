@@ -1,18 +1,9 @@
 package be.limero.vertx;
 
-import java.io.UnsupportedEncodingException;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.fusesource.hawtbuf.Buffer;
-import org.fusesource.hawtbuf.UTF8Buffer;
 import org.fusesource.mqtt.client.Callback;
 import org.fusesource.mqtt.client.CallbackConnection;
-import org.fusesource.mqtt.client.Listener;
-import org.fusesource.mqtt.client.MQTT;
-import org.fusesource.mqtt.client.QoS;
-import org.fusesource.mqtt.client.Topic;
 
 import be.limero.network.Request;
 import be.limero.programmer.Bootloader;
@@ -23,15 +14,17 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.json.JsonObject;
 
 public class Controller extends AbstractVerticle {
 	private final static Logger log = Logger.getLogger(Controller.class.toString());
-	static Vertx vertx = Vertx.factory.vertx();
+	static Vertx vertx = Vertx.vertx();
 	private final static EventBus eb = vertx.eventBus();
+
 	Stm32Programmer ui;
 	Stm32Model model;
-	MqttVerticle proxy;
-	MQTT mqtt;
+	// MqttVerticle proxy;
+
 	CallbackConnection connection;
 	org.fusesource.mqtt.client.Future<Void> future;
 
@@ -55,19 +48,12 @@ public class Controller extends AbstractVerticle {
 
 			});
 
-			mqtt = new MQTT();
-			mqtt.setHost(model.getHost(), model.getPort());
-			mqtt.setClientId("programmer");
-			mqtt.setKeepAlive((short) 20);
-			mqtt.setWillTopic("programmer/alive");
-			mqtt.setWillMessage("false");
-			mqtt.setClientId("STM32_PROGRAMMER_" + System.currentTimeMillis());
-
 			eb.consumer("controller", message -> {
-				onEbMessage((String) message.body());
+				onEbMessage(message.body());
 				ui.updateView();
 			});
 			vertx.deployVerticle(this);
+			vertx.deployVerticle(new MqttVerticle());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -77,127 +63,78 @@ public class Controller extends AbstractVerticle {
 		eb.send("controller", s);
 	}
 
-	void onPublish(org.fusesource.mqtt.client.Message msg) {
-		try {
-			log.info(" received publish message " + msg.getTopic() + ":"
-					+ new String(msg.getPayloadBuffer().toByteArray(), "UTF-8"));
-			msg.ack();
-		} catch (UnsupportedEncodingException e) {
-			log.log(Level.SEVERE, "onPublish fails", e);
-		}
-
-	}
-
-	void onEbMessage(String cmd) {
-		log.info(" controller received :" + cmd);
-
-		switch (cmd) {
-		case "connect": {
-			try {
-				mqtt.setHost(model.getHost(), model.getPort());
-				connection = mqtt.callbackConnection();
-				log.info(" connecting to " + model.getHost() + ":" + model.getPort());
-				connection.listener(new Listener() {
-
-					public void onDisconnected() {
-						log.log(Level.SEVERE, " connection lost");
-					}
-
-					public void onConnected() {
-						log.log(Level.SEVERE, " connection succeeded.");
-					}
-
-					public void onPublish(UTF8Buffer topic, Buffer payload, Runnable ack) {
-						try {
-							log.info(" recv topic " + topic.toString() + " :"
-									+ new String(payload.toByteArray(), "UTF-8"));
-						} catch (UnsupportedEncodingException e) {
-							// TODO Auto-generated catch
-							// block
-							log.log(Level.SEVERE, "onPublish ", e);
-						}
-						ack.run();
-					}
-
-					public void onFailure(Throwable value) {
-						log.log(Level.SEVERE, " failure ", value);
-						connection.disconnect(null);
-					}
-				});
-				connection.connect(new Callback<Void>() {
-
-					@Override
-					public void onFailure(Throwable arg0) {
-						log.log(Level.SEVERE, "MQTT connection failed ", arg0);
-						model.setConnected(false);
-					}
-
-					@Override
-					public void onSuccess(Void arg0) {
-						log.info(" MQTT connected.");
-						model.setConnected(true);
-						connection.subscribe(new Topic[] { new Topic("stm32/#", QoS.AT_LEAST_ONCE) },
-								new Callback<byte[]>() {
-
-									@Override
-									public void onFailure(Throwable arg0) {
-										log.log(Level.SEVERE, "subscription failed", arg0);
-									}
-
-									@Override
-									public void onSuccess(byte[] arg0) {
-										log.info("subscribed.");
-
-									}
-								});
-
-					}
-				});
-
-			} catch (Exception e) {
-				e.printStackTrace();
+	void onEbMessage(Object msg) {
+		log.info(" controller received :" + msg);
+		if (msg instanceof JsonObject) {
+			JsonObject json = (JsonObject) msg;
+			String cmd = json.getString("cmd");
+			switch(cmd) {
+			case "connect":{
+				model.setConnected(json.getBoolean("connected"));
+				break;
 			}
-			break;
-		}
-		case "disconnect": {
-			connection.disconnect(null);
-			break;
-		}
-		case "get": {
-			String json = new Request(cmd, Bootloader.Get.request()).toJson().toString();
-			log.info(" send json :" + json);
-			connection.publish("stm32/in/request", json.getBytes(), QoS.AT_LEAST_ONCE, false, null);
-			break;
-		}
-		case "getId": {
-			String json = new Request(cmd, Bootloader.GetId.request()).toJson().toString();
-			log.info(" send json :" + json);
-			connection.publish("stm32/in/request", json.getBytes(), QoS.AT_LEAST_ONCE, false, null);
-			break;
-		}
-		case "getVersion": {
-			String json = new Request(cmd, Bootloader.GetVersion.request()).toJson().toString();
-			log.info(" send json :" + json);
-			connection.publish("stm32/in/request", json.getBytes(), QoS.AT_LEAST_ONCE, false, null);
-			break;
-		}
-		case "reset": {
-			String json = new Request(cmd, Bootloader.Reset.request()).toJson().toString();
-			log.info(" send json :" + json);
-			connection.publish("stm32/in/request", json.getBytes(), QoS.AT_LEAST_ONCE, false, null);
-			break;
-		}
+			}
+		} else if (msg instanceof String) {
+			String cmd = (String) msg;
+			switch (cmd) {
+			case "connect": {
+				JsonObject json = new JsonObject();
+				json.put("cmd", "connect");
+				json.put("host", model.getHost());
+				json.put("port", model.getPort());
+				eb.send("proxy", json);
+				break;
+			}
+			case "disconnect": {
+				eb.send("proxy", "disconnect");
+				break;
+			}
+
+			case "get": {
+				eb.send("proxy", new Request(cmd, Bootloader.Get.request()).toJson());
+				break;
+			}
+			case "getId": {
+				eb.send("proxy", new Request(cmd, Bootloader.GetId.request()).toJson());
+				break;
+			}
+			case "getVersion": {
+				eb.send("proxy", new Request(cmd, Bootloader.GetVersion.request()).toJson());
+				break;
+			}
+			case "read": {
+				for (int i = 0; i < 256; i++) {
+					eb.send("proxy",
+							new Request(cmd, Bootloader.ReadMemory.request(0x08000000 + i * 256, 256)).toJson());
+				}
+				break;
+			}
+
+			case "write": {
+				for (int i = 0; i < 256; i++) {
+					eb.send("proxy",
+							new Request(cmd, Bootloader.WriteMemory.request(0x08000000 + i * 256, new byte[] {}))
+									.toJson());
+				}
+				break;
+			}
+
+			case "reset": {
+				eb.send("proxy", new Request(cmd, Bootloader.Reset.request()).toJson());
+				break;
+			}
+			}
 		}
 	}
 
 	@Override
 	public void start(Future<Void> startFuture) {
-		log.info("MyVerticle started!");
+		log.info("ControllerVerticle started!");
 	}
 
 	@Override
 	public void stop(Future<Void> stopFuture) throws Exception {
-		log.info("MyVerticle stopped!");
+		log.info("ControllerVerticle stopped!");
 	}
 
 }

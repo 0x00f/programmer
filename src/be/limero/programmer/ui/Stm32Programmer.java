@@ -1,26 +1,31 @@
 package be.limero.programmer.ui;
 
+
 import java.awt.EventQueue;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.io.File;
+import java.util.logging.Logger;
 
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
+import be.limero.file.FileManager;
 import be.limero.programmer.Stm32Model;
 import be.limero.vertx.Controller;
-import javax.swing.JScrollPane;
-import java.awt.Font;
 
 public class Stm32Programmer extends JFrame {
 
@@ -41,6 +46,11 @@ public class Stm32Programmer extends JFrame {
 	private JTextArea txtLogging;
 	private JButton btnConnect;
 	private JTextField textPort;
+	final JFileChooser fc = new JFileChooser();
+	private final static Logger log = Logger.getLogger(Stm32Programmer.class.toString());
+
+
+
 
 	/**
 	 * Launch the application.
@@ -126,7 +136,20 @@ public class Stm32Programmer extends JFrame {
 		JButton btnBrowse = new JButton("Browse...");
 		btnBrowse.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				//Handle open button action.
+			    if (e.getSource() == btnBrowse) {
+			        int returnVal = fc.showOpenDialog(Stm32Programmer.this);
 
+			        if (returnVal == JFileChooser.APPROVE_OPTION) {
+			            File file = fc.getSelectedFile();
+			            //This is where a real application would open the file.
+			            log.info("Opening: " + file.getName() );
+			            model.setBinFile(file.getAbsolutePath());
+			            updateView();
+			        } else {
+			            log.info("Open command cancelled by user.");
+			        }
+			   }
 			}
 		});
 		btnBrowse.setBounds(486, 38, 89, 23);
@@ -278,6 +301,7 @@ public class Stm32Programmer extends JFrame {
 				getLblStatus().setText(model.getStatus());
 				getProgressBar().setValue(model.getProgress());
 				txtLogging.setText(model.getLog());
+				txtBinaryFile.setText(model.getBinFile());
 			}
 
 		});
