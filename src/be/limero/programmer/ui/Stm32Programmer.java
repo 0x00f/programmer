@@ -124,7 +124,9 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(progressBar);
 
 		txtBinaryFile = new JTextField();
+		txtBinaryFile.setText("C:\\Users\\lieven2\\workspace\\stm32f10x_led\\Debug\\stm32f10x_led.bin");
 		txtBinaryFile.setBounds(90, 39, 386, 20);
+		model.setBinFile(txtBinaryFile.getText());
 		contentPane.add(txtBinaryFile);
 		txtBinaryFile.setColumns(10);
 

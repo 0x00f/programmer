@@ -26,6 +26,7 @@ public class Stm32Model {
 
 	String binFile;
 	byte[] flashMemory;
+	byte[] fileMemory;
 
 	public Stm32Model() {
 
@@ -38,13 +39,6 @@ public class Stm32Model {
 		flashMemory = new byte[0x20000];
 		Arrays.fill(flashMemory, (byte) 0xFF);
 	}
-
-	public static void main(String[] args) {
-
-	}
-
-
-
 
 	public String getBootloaderVersion() {
 		return "" + (bootloaderVersion >> 4) + "." + (bootloaderVersion & 0xF);
@@ -141,6 +135,34 @@ public class Stm32Model {
 
 	public void setPort(int port) {
 		this.port = port;
+	}
+
+	/**
+	 * @return the flashMemory
+	 */
+	public byte[] getFlashMemory() {
+		return flashMemory;
+	}
+
+	/**
+	 * @param flashMemory the flashMemory to set
+	 */
+	public void setFlashMemory(byte[] flashMemory) {
+		this.flashMemory = flashMemory;
+	}
+
+	/**
+	 * @return the fileMemory
+	 */
+	public byte[] getFileMemory() {
+		return fileMemory;
+	}
+
+	/**
+	 * @param fileMemory the fileMemory to set
+	 */
+	public void setFileMemory(byte[] fileMemory) {
+		this.fileMemory = fileMemory;
 	}
 
 

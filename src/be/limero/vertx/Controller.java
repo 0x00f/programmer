@@ -1,10 +1,12 @@
 package be.limero.vertx;
 
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 import org.fusesource.mqtt.client.Callback;
 import org.fusesource.mqtt.client.CallbackConnection;
 
+import be.limero.file.FileManager;
 import be.limero.network.Request;
 import be.limero.programmer.Bootloader;
 import be.limero.programmer.Stm32Model;
@@ -100,6 +102,14 @@ public class Controller extends AbstractVerticle {
 			}
 			case "getVersion": {
 				eb.send("proxy", new Request(cmd, Bootloader.GetVersion.request()).toJson());
+				break;
+			}
+			
+			case "program": {
+				model.setFileMemory(FileManager.loadBinaryFile(model.getBinFile()));
+				log.info(" binary image size : "+model.getFileMemory().length);
+				byte[] sector=Arrays.copyOfRange(model.getFileMemory(),0,256);
+				eb.send("proxy", new Request(cmd, Bootloader.WriteMemory.request(0x8000000, sector)).toJson());
 				break;
 			}
 			case "read": {
