@@ -48,6 +48,14 @@ public class Stm32Programmer extends JFrame {
 	private JTextField textPort;
 	final JFileChooser fc = new JFileChooser();
 	private final static Logger log = Logger.getLogger(Stm32Programmer.class.toString());
+	private JButton btnReset;
+	private JButton btnGo;
+	private JButton btnProgram;
+	private JButton btnRead;
+	private JButton btnGet;
+	private JButton btnGetid;
+	private JButton btnGetversioncommands;
+	private JButton btnVerify;
 
 
 
@@ -157,7 +165,7 @@ public class Stm32Programmer extends JFrame {
 		btnBrowse.setBounds(486, 38, 89, 23);
 		contentPane.add(btnBrowse);
 
-		JButton btnReset = new JButton("Reset");
+		btnReset = new JButton("Reset");
 		btnReset.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				controller.send("reset");
@@ -166,7 +174,7 @@ public class Stm32Programmer extends JFrame {
 		btnReset.setBounds(10, 70, 63, 23);
 		contentPane.add(btnReset);
 
-		JButton btnGo = new JButton("Go");
+		btnGo = new JButton("Go");
 		btnGo.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				controller.send("go");
@@ -175,7 +183,7 @@ public class Stm32Programmer extends JFrame {
 		btnGo.setBounds(81, 70, 56, 23);
 		contentPane.add(btnGo);
 
-		JButton btnProgram = new JButton("Program");
+		btnProgram = new JButton("Program");
 		btnProgram.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				controller.send("program");
@@ -184,7 +192,7 @@ public class Stm32Programmer extends JFrame {
 		btnProgram.setBounds(147, 70, 75, 23);
 		contentPane.add(btnProgram);
 
-		JButton btnRead = new JButton("Read");
+		btnRead = new JButton("Read");
 		btnRead.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				controller.send("read");
@@ -193,7 +201,7 @@ public class Stm32Programmer extends JFrame {
 		btnRead.setBounds(232, 70, 63, 23);
 		contentPane.add(btnRead);
 
-		JButton btnVerify = new JButton("Verify");
+		btnVerify = new JButton("Verify");
 		btnVerify.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				controller.send("verify");
@@ -235,7 +243,7 @@ public class Stm32Programmer extends JFrame {
 		btnEnterBootloader.setBounds(10, 121, 172, 23);
 		contentPane.add(btnEnterBootloader);
 
-		JButton btnGetid = new JButton("GetID");
+		btnGetid = new JButton("GetID");
 		btnGetid.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				controller.send("getId");
@@ -244,7 +252,7 @@ public class Stm32Programmer extends JFrame {
 		btnGetid.setBounds(291, 121, 89, 23);
 		contentPane.add(btnGetid);
 
-		JButton btnGetversioncommands = new JButton("GetVersionCommands");
+		btnGetversioncommands = new JButton("GetVersionCommands");
 		btnGetversioncommands.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				controller.send("getVersion");
@@ -269,7 +277,7 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(textPort);
 		textPort.setColumns(10);
 
-		JButton btnGet = new JButton("Get");
+		btnGet = new JButton("Get");
 		btnGet.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				controller.send("get");
@@ -293,13 +301,23 @@ public class Stm32Programmer extends JFrame {
 		EventQueue.invokeLater(new Runnable() {
 
 			public void run() {
-
+				boolean enableButton=false;
 				if (model.getConnected()) {
+					enableButton=true;
 					getBtnConnect().setText("Disconnect");
 				} else {
 					getBtnConnect().setText("Connect");
 				}
-				lblDeviceInfo.setText(model.getInfo());
+				getBtnGet().setEnabled(enableButton);
+				getBtnGetid().setEnabled(enableButton);
+				getBtnGetversioncommands().setEnabled(enableButton);
+				getBtnGo().setEnabled(enableButton);
+				getBtnProgram().setEnabled(enableButton);
+				getBtnRead().setEnabled(enableButton);
+				getBtnReset().setEnabled(enableButton);
+				getBtnVerify().setEnabled(enableButton);
+
+//				lblDeviceInfo.setText(model.getId());
 				getLblStatus().setText(model.getStatus());
 				getProgressBar().setValue(model.getProgress());
 				txtLogging.setText(model.getLog());
@@ -351,5 +369,29 @@ public class Stm32Programmer extends JFrame {
 
 	public JButton getBtnConnect() {
 		return btnConnect;
+	}
+	public JButton getBtnReset() {
+		return btnReset;
+	}
+	public JButton getBtnGo() {
+		return btnGo;
+	}
+	public JButton getBtnProgram() {
+		return btnProgram;
+	}
+	public JButton getBtnRead() {
+		return btnRead;
+	}
+	public JButton getBtnGet() {
+		return btnGet;
+	}
+	public JButton getBtnGetid() {
+		return btnGetid;
+	}
+	public JButton getBtnGetversioncommands() {
+		return btnGetversioncommands;
+	}
+	public JButton getBtnVerify() {
+		return btnVerify;
 	}
 }

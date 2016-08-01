@@ -64,13 +64,13 @@ public class Request {
 	public JsonObject toJson() {
 		JsonObject json = new JsonObject();
 		json.put("id", id);
-		ByteBuf base64 = Base64.encode(Unpooled.copiedBuffer(data.bytes()));
+/*		ByteBuf base64 = Base64.encode(Unpooled.copiedBuffer(data.bytes()));
 		StringBuilder sb=new StringBuilder();
 		while( base64.readableBytes()>0) {
 			sb.append((char)base64.readByte());
-		}
-		json.put("data", sb.toString());
-		json.put("cmd", cmd);
+		}*/
+		json.put("data", data.bytes());
+		json.put("request", cmd);
 		return json;
 	}
 

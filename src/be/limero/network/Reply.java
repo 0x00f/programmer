@@ -21,13 +21,14 @@ public class Reply {
 	boolean fromJson(String s) {
 		try {
 			JsonObject json = new JsonObject(s);
-			cmd = json.getString("cmd");
+			cmd = json.getString("reply");
 			id = json.getInteger("id");
 			error = json.getInteger("error");
-			String sData = json.getString("data");
+/*			String sData = json.getString("data");
 			ByteBuf in = Unpooled.copiedBuffer(sData.getBytes());
 			ByteBuf bb = Base64.decode(in);
-			data = bb.array();
+			data = bb.array();*/
+			data =  json.getBinary("data");
 		} catch (Exception ex) {
 			log.log(Level.SEVERE, " json parsing failed ", ex);
 			return false;

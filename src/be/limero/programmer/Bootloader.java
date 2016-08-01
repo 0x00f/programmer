@@ -158,20 +158,20 @@ public class Bootloader {
 
 	public static class GetVersion {
 		@Getter
-		byte version;
+		static byte version;
 
 		public static byte[] request() {
-			return new byte[] { X_SEND, 1, GET_VERSION, xor(GET_VERSION), X_WAIT_ACK, X_RECV, 3, X_WAIT_ACK };
+			return new byte[] { X_SEND, 1, GET_VERSION, xor(GET_VERSION), X_WAIT_ACK, X_RECV, 2, X_WAIT_ACK };
 		}
 
-		boolean parse(Bytes reply) {
+		public static boolean parse(Bytes reply) {
 			if (reply.available() < 5)
 				return false;
 			if (reply.read() != ACK)
 				return false;
 			version = reply.read();
-			reply.read();
-			reply.read();
+			reply.read();	// skip option byte
+			reply.read();	// skip option byte
 			if (reply.read() != ACK)
 				return false;
 			return true;
@@ -179,13 +179,14 @@ public class Bootloader {
 	}
 
 	public static class GetId {
+		@Getter 
 		static byte[] pid;
 
 		public static byte[] request() {
 			return new byte[] { X_SEND, 1, GET_ID, xor(GET_ID), X_WAIT_ACK, X_RECV_VAR, X_RECV, 2, X_WAIT_ACK };
 		}
 
-		static boolean parse(Bytes reply) {
+		public static boolean parse(Bytes reply) {
 			if (reply.read() != ACK)
 				return false;
 			int length = (reply.read() & 0xFF) + 1;
@@ -231,7 +232,7 @@ public class Bootloader {
 
 	public static class Go {
 
-		static byte[] request(int address) {
+		public static byte[] request(int address) {
 			return new byte[] { X_SEND, 1, GO, xor(GO), X_WAIT_ACK, X_SEND, 5, slice(address, 3), slice(address, 2), //
 					slice(address, 1), slice(address, 0), fullXor(address), X_WAIT_ACK };
 		}

@@ -8,11 +8,14 @@ import java.util.Date;
 import java.util.logging.LogManager;
 import java.util.logging.LogRecord;
 
-import org.fusesource.mqtt.client.Callback;
 
 public class LogHandler extends java.util.logging.Handler {
+	
+	public interface LogLine {
+		void log(String line);
+	};
+	LogLine _logLine=null;
 
-	Callback<String> cb;
 	DateFormat dateFormat;
 
 	void addHandler() {
@@ -21,13 +24,11 @@ public class LogHandler extends java.util.logging.Handler {
 	}
 
 	public LogHandler() {
-		cb = null;
 		dateFormat = new SimpleDateFormat("HH:mm:ss");
-
 	}
 
-	public void register(Callback<String> cb) {
-		this.cb = cb;
+	public void register(LogLine logLine) {
+		_logLine = logLine;
 		addHandler();
 	}
 
@@ -38,8 +39,8 @@ public class LogHandler extends java.util.logging.Handler {
 		Date currentDate = new Date(record.getMillis());
 		out.printf("%8s %4.4s %20.20s.%10.10s | %s", dateFormat.format(currentDate), record.getLevel(),
 				record.getSourceClassName(), record.getSourceMethodName(), record.getMessage());
-		if (cb != null)
-			cb.onSuccess(text.toString());
+		if (_logLine != null)
+			_logLine.log(text.toString());
 	}
 
 	@Override
@@ -52,5 +53,4 @@ public class LogHandler extends java.util.logging.Handler {
 
 	}
 
-	// ...
 }
