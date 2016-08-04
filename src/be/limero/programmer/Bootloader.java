@@ -45,7 +45,7 @@ public class Bootloader {
 	public static final byte EXTENDED_ERASE_MEMORY = 0x44;
 	public static final byte RESET = 0x45;
 	public static final byte BOOT0 = 0x46;
-	
+
 	public static final byte WRITE_PROTECT = 0x63;
 	public static final byte WRITE_UNPROTECT = 0x73;
 	public static final byte READ_PROTECT = (byte) 0x82;
@@ -108,7 +108,7 @@ public class Bootloader {
 			x ^= arr[offset + i];
 		return x;
 	}
-	
+
 	public static class Reset {
 		@Getter
 		static byte version;
@@ -120,7 +120,7 @@ public class Bootloader {
 		}
 
 		static boolean parse(Bytes reply) {
-			
+
 			return true;
 
 		}
@@ -137,7 +137,7 @@ public class Bootloader {
 			return new byte[] { X_SEND, 1, GET, xor(GET), X_WAIT_ACK, X_RECV_VAR, X_WAIT_ACK };
 		}
 
-		static boolean parse(Bytes reply) {
+		public static boolean parse(Bytes reply) {
 			HashMap<String, Object> resp;
 			if (reply.read() != ACK)
 				return false;
@@ -170,8 +170,8 @@ public class Bootloader {
 			if (reply.read() != ACK)
 				return false;
 			version = reply.read();
-			reply.read();	// skip option byte
-			reply.read();	// skip option byte
+			reply.read(); // skip option byte
+			reply.read(); // skip option byte
 			if (reply.read() != ACK)
 				return false;
 			return true;
@@ -179,11 +179,11 @@ public class Bootloader {
 	}
 
 	public static class GetId {
-		@Getter 
-		static byte[] pid;
+		@Getter
+		static short pid;
 
 		public static byte[] request() {
-			return new byte[] { X_SEND, 1, GET_ID, xor(GET_ID), X_WAIT_ACK, X_RECV_VAR, X_RECV, 2, X_WAIT_ACK };
+			return new byte[] { X_SEND, 1, GET_ID, xor(GET_ID), X_WAIT_ACK, X_RECV_VAR, X_WAIT_ACK };
 		}
 
 		public static boolean parse(Bytes reply) {
@@ -192,9 +192,11 @@ public class Bootloader {
 			int length = (reply.read() & 0xFF) + 1;
 			if (reply.available() < length + 1)
 				return false;
-			pid = new byte[length];
-			for (int i = 0; i < length; i++)
-				pid[i] = reply.read();
+			pid = 0;
+			for (int i = 0; i < length; i++) {
+				pid <<= 8;
+				pid += reply.read();
+			}
 			if (reply.read() != ACK)
 				return false;
 			return true;
@@ -202,6 +204,7 @@ public class Bootloader {
 	}
 
 	public static class ReadMemory {
+		@Getter
 		byte[] memory;
 
 		public static byte[] request(int address, int length) {
@@ -210,7 +213,7 @@ public class Bootloader {
 					X_SEND, 4, slice(address, 3), slice(address, 2), //
 					slice(address, 1), slice(address, 0), fullXor(address), X_WAIT_ACK, //
 					X_SEND, 1, (byte) (length - 1), xor(length - 1), X_WAIT_ACK, //
-					X_RECV, (byte) (length - 1), X_WAIT_ACK };
+					X_RECV, (byte) (length - 1) };
 			return Read_Memory;
 		}
 
@@ -233,39 +236,50 @@ public class Bootloader {
 	public static class Go {
 
 		public static byte[] request(int address) {
-			return new byte[] { X_SEND, 1, GO, xor(GO), X_WAIT_ACK, X_SEND, 5, slice(address, 3), slice(address, 2), //
+			return new byte[] { X_SEND, 1, GO, xor(GO), X_WAIT_ACK, //
+					X_SEND, 4, slice(address, 3), slice(address, 2), //
 					slice(address, 1), slice(address, 0), fullXor(address), X_WAIT_ACK };
 		}
 
-		boolean parse(Bytes bytes) {
+		public static boolean parse(Bytes bytes) {
+
 			return true;
 		}
 	}
 
 	public static class WriteMemory {
 		public static byte[] request(int address, byte[] instr) {
-			byte[] Write_Memory = { X_SEND, 1, WRITE_MEMORY, xor(WRITE_MEMORY), X_WAIT_ACK, X_SEND, 5,
+			byte N = (byte) (instr.length - 1);
+			byte[] Write_Memory = { X_SEND, 1, WRITE_MEMORY, xor(WRITE_MEMORY), X_WAIT_ACK, //
+					X_SEND, 4, //
 					slice(address, 3), slice(address, 2), //
-					slice(address, 1), slice(address, 0), fullXor(address), X_WAIT_ACK };
-			byte[] Write_Memory_Closure = { fullXor(instr), X_WAIT_ACK };
-			byte[] result = new byte[instr.length + Write_Memory.length + Write_Memory_Closure.length];
+					slice(address, 1), slice(address, 0), //
+					fullXor(address), X_WAIT_ACK, //
+					X_SEND, N };
+			byte[] Write_Memory_Closure = { X_SEND, 0, (byte) (N ^ fullXor(instr)), X_WAIT_ACK };
+			byte[] result = new byte[Write_Memory.length + instr.length + Write_Memory_Closure.length];
 			System.arraycopy(Write_Memory, 0, result, 0, Write_Memory.length);
 			System.arraycopy(instr, 0, result, Write_Memory.length, instr.length);
 			System.arraycopy(Write_Memory_Closure, 0, result, Write_Memory.length + instr.length,
 					Write_Memory_Closure.length);
 			return result;
 		}
-		boolean parse(Bytes bytes) {
-			return true;
+
+		public static boolean parse(Bytes bytes) {
+			bytes.offset(0);
+			if (bytes.length() == 3 && bytes.read() == ACK && bytes.read() == ACK && bytes.read() == ACK)
+				return true;
+			return false;
 		}
 	}
 
 	public static class GlobalEraseMemory {
 		static byte[] request() {
-			byte[] Global_Erase_Memory = { X_SEND, 1, ERASE_MEMORY, xor(ERASE_MEMORY), X_WAIT_ACK, 0, xor(0),
-					X_WAIT_ACK };
+			byte[] Global_Erase_Memory = { X_SEND, 1, ERASE_MEMORY, xor(ERASE_MEMORY), X_WAIT_ACK, //
+					0, xor(0),	X_WAIT_ACK };
 			return Global_Erase_Memory;
 		}
+
 		boolean parse(Bytes bytes) {
 			return true;
 		}
@@ -282,6 +296,7 @@ public class Bootloader {
 			result[Erase_Memory.length + pages.length + 1] = X_WAIT_ACK;
 			return result;
 		}
+
 		boolean parse(Bytes bytes) {
 			return true;
 		}
@@ -290,7 +305,8 @@ public class Bootloader {
 	public static class ExtendedEraseMemory {
 
 		static byte[] request(int[] pages) {
-			byte[] Extended_Erase_Memory = { X_SEND, 1, EXTENDED_ERASE_MEMORY, xor(EXTENDED_ERASE_MEMORY), X_WAIT_ACK,
+			byte[] Extended_Erase_Memory = { //
+					X_SEND, 1, EXTENDED_ERASE_MEMORY, xor(EXTENDED_ERASE_MEMORY), X_WAIT_ACK,
 					X_SEND, (byte) (pages.length - 1) };
 			byte[] result = new byte[Extended_Erase_Memory.length + pages.length * 2 + 4];
 			System.arraycopy(Extended_Erase_Memory, 0, result, 0, Extended_Erase_Memory.length);
@@ -306,6 +322,7 @@ public class Bootloader {
 			result[offset++] = X_WAIT_ACK;
 			return result;
 		}
+
 		boolean parse(Bytes bytes) {
 			return true;
 		}
@@ -327,6 +344,7 @@ public class Bootloader {
 			result[offset++] = X_WAIT_ACK;
 			return result;
 		}
+
 		boolean parse(Bytes bytes) {
 			return true;
 		}
@@ -337,6 +355,7 @@ public class Bootloader {
 			byte[] WriteUnprotect = { X_SEND, 1, WRITE_UNPROTECT, xor(WRITE_UNPROTECT), X_WAIT_ACK, X_WAIT_ACK };
 			return WriteUnprotect;
 		}
+
 		boolean parse(Bytes bytes) {
 			return true;
 		}
@@ -347,6 +366,7 @@ public class Bootloader {
 			byte[] ReadProtect = { X_SEND, 1, READ_PROTECT, xor(READ_PROTECT), X_WAIT_ACK, X_WAIT_ACK };
 			return ReadProtect;
 		}
+
 		boolean parse(Bytes bytes) {
 			return true;
 		}
@@ -358,6 +378,7 @@ public class Bootloader {
 			byte[] ReadUnprotect = { X_SEND, 1, READ_UNPROTECT, xor(READ_UNPROTECT), X_WAIT_ACK, X_WAIT_ACK };
 			return ReadUnprotect;
 		}
+
 		boolean parse(Bytes bytes) {
 			return true;
 		}

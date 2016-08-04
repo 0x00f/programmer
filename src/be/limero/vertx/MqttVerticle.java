@@ -1,6 +1,8 @@
 package be.limero.vertx;
 
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -13,6 +15,7 @@ import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
 
 import be.limero.network.RequestQueue;
 import io.vertx.core.AbstractVerticle;
@@ -28,7 +31,9 @@ public class MqttVerticle extends AbstractVerticle implements IMqttActionListene
 	private static EventBus eb;
 	RequestQueue queue = new RequestQueue(300);
 	boolean mqttConnected;
-	HashMap<Integer,Message<Object>> replies;
+	HashMap<Integer, Message<Object>> replies;
+	Long lastCommand;
+	int lastId;
 
 	/*
 	 * (non-Javadoc)
@@ -41,7 +46,7 @@ public class MqttVerticle extends AbstractVerticle implements IMqttActionListene
 		super.start();
 
 		log.info("Mqtt verticle started ");
-		replies = new HashMap<Integer,Message<Object>>();
+		replies = new HashMap<Integer, Message<Object>>();
 		eb = getVertx().eventBus();
 		eb.consumer("proxy", msg -> {
 			// log.info(" received EB message :" + msg);
@@ -72,7 +77,7 @@ public class MqttVerticle extends AbstractVerticle implements IMqttActionListene
 			JsonObject json = (JsonObject) msg.body();
 			if (json.getString("request") == "connect") {
 				connect(json.getString("host"), json.getInteger("port"));
-//				mqtt.setCallback(this);
+				// mqtt.setCallback(this);
 			} else if (json.getString("request") == "disconnect") {
 				try {
 					mqtt.disconnect();
@@ -80,23 +85,10 @@ public class MqttVerticle extends AbstractVerticle implements IMqttActionListene
 				} catch (MqttException e) {
 					log.log(Level.SEVERE, " disconnect failed ", e);
 				}
-			} else {
+			} else { // all other requests to device, if not busy
 				try {
 					replies.put(json.getInteger("id"), msg);
-					mqtt.publish("stm32/in/request", json.toString().getBytes(), 0, false, null,
-							new IMqttActionListener() {
-
-								@Override
-								public void onFailure(IMqttToken toke, Throwable exc) {
-									log.log(Level.SEVERE, " publish failed ", exc);
-								}
-
-								@Override
-								public void onSuccess(IMqttToken token) {
-									log.info(" publish succeeded " + token);
-								}
-
-							});
+					if (canSendNext()) sendNext();						
 				} catch (Exception e) {
 					log.log(Level.SEVERE, " mqtt publish failed ", e);
 					log.info("mqtt client isConnected() = " + mqtt.isConnected());
@@ -129,20 +121,21 @@ public class MqttVerticle extends AbstractVerticle implements IMqttActionListene
 
 	@Override
 	public void messageArrived(String topic, MqttMessage msg) throws Exception {
-		log.info(" HOW DID I ARRIVE HERE ? ");
+/*		log.info(" HOW DID I ARRIVE HERE ? ");
 		try {
 			String message = new String(msg.getPayload(), "UTF-8");
 			log.info(" " + topic + " :" + message);
-			if (topic.compareTo("stm32/reply")==0) {
+			if (topic.compareTo("stm32/reply") == 0) {
 				JsonObject json = new JsonObject(message);
-				log.info(" sending reply on "+json.getInteger("id"));
+				log.info(" sending reply on " + json.getInteger("id"));
 				replies.get(json.getInteger("id")).reply(json);
-//				eb.send("controller", json);
+				replies.remove(json.getInteger("id"));
+				// eb.send("controller", json);
 			}
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "onPublish ", e);
 		}
-
+*/
 	}
 
 	@Override
@@ -150,6 +143,47 @@ public class MqttVerticle extends AbstractVerticle implements IMqttActionListene
 		log.log(Level.SEVERE, " onFailure lost");
 		// eb.send("controller", new JsonObject().put("connected",
 		// false).put("reply", "connect"));
+	}
+
+	boolean canSendNext() {
+		if (lastCommand == null) {
+			lastCommand = System.currentTimeMillis();
+			return true;
+		} else if (lastCommand < (System.currentTimeMillis() - 10)) {
+			lastCommand = System.currentTimeMillis();
+			return true;
+		}
+		return false;
+	}
+	
+	void sendNext(){
+		try {
+			if ( replies.isEmpty() ) {
+				lastCommand=null;
+				return;
+			}
+			lastCommand = System.currentTimeMillis();
+			Iterator <Message<Object>> it=replies.values().iterator();
+			Message<Object> first = it.next();
+			JsonObject json=(JsonObject)first.body();
+			mqtt.publish("stm32/in/request", json.toString().getBytes(), 0, false, null,
+					new IMqttActionListener() {
+
+						@Override
+						public void onFailure(IMqttToken toke, Throwable exc) {
+							log.log(Level.SEVERE, " publish failed ", exc);
+						}
+
+						@Override
+						public void onSuccess(IMqttToken token) {
+							// log.info(" publish succeeded " +
+							// token);
+						}
+
+					});
+		} catch (Exception e) {
+			log.log(Level.SEVERE, " send failed.",e);
+		}
 	}
 
 	@Override
@@ -163,13 +197,20 @@ public class MqttVerticle extends AbstractVerticle implements IMqttActionListene
 					try {
 						String m = new String(msg.getPayload(), "UTF-8");
 						log.info("'" + topic + "':" + m);
-						if (topic.compareTo("stm32/reply")==0) {
+						if (topic.compareTo("stm32/reply") == 0) {
 							log.info("sending reply");
 							JsonObject json = new JsonObject(m);
 							if (json.containsKey("reply")) {
 								log.info("sending reply");
 								replies.get(json.getInteger("id")).reply(json);
-//								eb.send("controller", json);
+								replies.remove(json.getInteger("id"));
+								if ( json.getInteger("error") !=0 ) {
+									replies.forEach((k,message)->{
+										replies.get(k).fail(-1, "previous command failed");										
+									});
+									replies.clear();
+								}
+								else sendNext();
 							}
 						}
 					} catch (Exception e) {

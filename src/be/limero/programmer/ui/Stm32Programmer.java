@@ -32,7 +32,6 @@ public class Stm32Programmer extends JFrame {
 	private JPanel contentPane;
 	private JTextField txtHost;
 	private JTextField txtBinaryFile;
-	private Stm32Model model;
 	private LogHandler logHandler;
 	// private EventBus eb = Vertx.factory.vertx().eventBus();
 	private Controller controller;
@@ -56,6 +55,10 @@ public class Stm32Programmer extends JFrame {
 	private JButton btnGetid;
 	private JButton btnGetversioncommands;
 	private JButton btnVerify;
+	/**
+	 * @wbp.nonvisual location=19,511
+	 */
+	private final Stm32Model model = new Stm32Model();
 
 
 
@@ -82,8 +85,7 @@ public class Stm32Programmer extends JFrame {
 	 */
 	public Stm32Programmer() {
 
-		model = new Stm32Model();
-		controller = new Controller(this, model);
+		controller = new Controller(this);
 
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 716, 477);
@@ -393,5 +395,9 @@ public class Stm32Programmer extends JFrame {
 	}
 	public JButton getBtnVerify() {
 		return btnVerify;
+	}
+
+	public Stm32Model getStm32Model() {
+		return model;
 	}
 }

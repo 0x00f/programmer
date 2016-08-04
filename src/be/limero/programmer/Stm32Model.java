@@ -1,5 +1,7 @@
 package be.limero.programmer;
 
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -7,6 +9,7 @@ import java.util.Date;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 
 @Data
 public class Stm32Model {
@@ -16,7 +19,7 @@ public class Stm32Model {
 	String host;
 	int port;
 	byte bootloaderVersion;
-	short chipId;
+	short pid;
 	byte[] commands;
 	int id;
 	Integer progress;
@@ -24,6 +27,17 @@ public class Stm32Model {
 	String binFile;
 	byte[] flashMemory;
 	byte[] fileMemory;
+	int heapSize;
+	
+	private PropertyChangeSupport pcs = new PropertyChangeSupport(this);
+
+	public void addPropertyChangeListener(PropertyChangeListener pcl) {
+		pcs.addPropertyChangeListener(pcl);
+	}
+
+	public void removePropertyChangeListener(PropertyChangeListener pcl) {
+		pcs.removePropertyChangeListener(pcl);
+	}
 
 	public Stm32Model() {
 
