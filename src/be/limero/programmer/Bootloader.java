@@ -41,7 +41,7 @@ public class Bootloader {
 	public static final byte READ_MEMORY = 0x11;
 	public static final byte GO = 0x21;
 	public static final byte WRITE_MEMORY = 0x31;
-	public static final byte ERASE_MEMORY = 0x41;
+	public static final byte ERASE_MEMORY = 0x43;
 	public static final byte EXTENDED_ERASE_MEMORY = 0x44;
 	public static final byte RESET = 0x45;
 	public static final byte BOOT0 = 0x46;
@@ -286,18 +286,23 @@ public class Bootloader {
 	}
 
 	public static class EraseMemory {
-		static byte[] request(byte[] pages) {
-			byte[] Erase_Memory = { X_SEND, 1, ERASE_MEMORY, xor(ERASE_MEMORY), X_WAIT_ACK, (byte) (pages.length - 1) };
-			byte[] result = new byte[Erase_Memory.length + pages.length];
+		public static byte[] request(byte[] pages) {
+			byte N = (byte) (pages.length );
+			
+			byte[] Erase_Memory = { X_SEND, 1, ERASE_MEMORY, xor(ERASE_MEMORY), X_WAIT_ACK,//
+					X_SEND,1, -1,0,X_WAIT_ACK };
+			
+			byte[] result = new byte[Erase_Memory.length + pages.length+2];
+			
 			System.arraycopy(Erase_Memory, 0, result, 0, Erase_Memory.length);
 			System.arraycopy(pages, 0, result, Erase_Memory.length, pages.length);
-			// TODO add length in checksum
-			result[Erase_Memory.length + pages.length] = fullXor(pages);
+			result[Erase_Memory.length + pages.length] =(byte)( N ^ fullXor(pages));
 			result[Erase_Memory.length + pages.length + 1] = X_WAIT_ACK;
-			return result;
+			
+			return Erase_Memory;
 		}
 
-		boolean parse(Bytes bytes) {
+		public static boolean parse(Bytes bytes) {
 			return true;
 		}
 	}

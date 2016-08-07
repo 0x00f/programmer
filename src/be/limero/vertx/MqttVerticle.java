@@ -205,6 +205,7 @@ public class MqttVerticle extends AbstractVerticle implements IMqttActionListene
 								replies.get(json.getInteger("id")).reply(json);
 								replies.remove(json.getInteger("id"));
 								if ( json.getInteger("error") !=0 ) {
+									log.warning(" error occured , cancelling queue ");
 									replies.forEach((k,message)->{
 										replies.get(k).fail(-1, "previous command failed");										
 									});

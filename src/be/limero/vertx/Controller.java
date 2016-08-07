@@ -42,7 +42,7 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 				ui.updateView();
 			});
 			vertx.deployVerticle(this);
-			vertx.deployVerticle(new MqttVerticle());
+			vertx.deployVerticle(new UdpVerticle());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -61,17 +61,21 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 	// public void askDevice(JsonObject req,
 	// Handler<AsyncResult<Message<JsonObject>>> replyHandler) {
 
-	public void askDevice(JsonObject req, Handler<Bytes> replyHandler) {
+	static int nextId = 0;
+
+	public void askDevice(JsonObject req, Handler<JsonObject> replyHandler) {
 		DeliveryOptions delOp = new DeliveryOptions();
-		delOp.setSendTimeout(1000);
+		delOp.setSendTimeout(5000);
+		req.put("id", nextId++);
 		eb.send("proxy", req, delOp, resp -> {
 			log.info(" handling " + req.getString("request") + " response");
 			if (resp.succeeded()) {
 				JsonObject json = (JsonObject) resp.result().body();
 				int error = json.getInteger("error");
 				if (error == 0) {
-					Bytes data = new Bytes(json.getBinary("data"));
-					replyHandler.handle(data);
+					replyHandler.handle(json);
+				} else {
+					log.info(" failed error : " + json.getInteger("error"));
 				}
 			} else if (resp.failed()) {
 				log.info(" failed " + req.getString("request") + " " + resp.cause().getMessage());
@@ -96,38 +100,45 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 			String cmd = (String) msg;
 			switch (cmd) {
 			case "connect": {
-				JsonObject json = new JsonObject();
-				json.put("request", "connect");
-				json.put("host", model.getHost());
-				json.put("port", model.getPort());
-				eb.send("proxy", json);
+				askDevice(new JsonObject().put("request", "connect").put("host", model.getHost()).put("port", model.getPort()), reply -> {
+					model.setConnected(reply.getBoolean("connected"));
+
+				});
 				break;
 			}
 			case "disconnect": {
-				eb.send("proxy", new JsonObject().put("request", "disconnect"));
+				askDevice(new JsonObject().put("request", "disconnect"), reply -> {
+					model.setConnected(reply.getBoolean("connected"));
 
+				});
+
+				break;
+			}
+
+			case "erase": {
+				askDevice(new JsonObject().put("request", "eraseAll"), reply -> {
+					log.info(" reply " + reply);
+
+				});
 				break;
 			}
 
 			case "get": {
-				askDevice(new Request(cmd, Bootloader.Get.request()).toJson(), data -> {
-					Bootloader.Get.parse(data);
-					model.setBootloaderVersion(Bootloader.Get.getVersion());
+				askDevice(new JsonObject().put("request", "get"), reply -> {
+					log.info(" reply " + reply);
+
 				});
 				break;
 			}
 			case "getId": {
-				askDevice(new Request(cmd, Bootloader.GetId.request()).toJson(), data -> {
-					Bootloader.GetId.parse(data);
-					model.setPid(Bootloader.GetId.getPid());
+				askDevice(new JsonObject().put("request", "getId"), reply -> {
+					log.info(" reply " + reply);
 				});
 				break;
 			}
 			case "getVersion": {
-				askDevice(new Request(cmd, Bootloader.GetVersion.request()).toJson(), data -> {
-					if (Bootloader.GetVersion.parse(data)) {
-						model.setBootloaderVersion(Bootloader.GetVersion.getVersion());
-					}
+				askDevice(new JsonObject().put("request", "getId"), reply -> {
+					log.info(" reply " + reply);
 				});
 				break;
 			}
@@ -143,39 +154,37 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 						break;
 					// log.info(" length :" + length + " offset : " + offset);
 					byte[] sector = Arrays.copyOfRange(model.getFileMemory(), offset, offset + length);
-					askDevice(new Request(cmd, Bootloader.WriteMemory.request(0x8000000+offset, sector)).toJson(), data -> {
-						if (Bootloader.WriteMemory.parse(data)) {
-							model.setProgress(length*100/128000);
-						}
-					});
+					askDevice(new JsonObject().put("request", "writeMemory").put("address", 0x8000000 + offset)
+							.put("length", length), reply -> {
+								log.info(" reply " + reply);
+							});
 					offset += 256;
 				}
 				break;
 			}
 			case "read": {
 				for (int i = 0; i < 256; i++) {
-					eb.send("proxy",
-							new Request(cmd, Bootloader.ReadMemory.request(0x08000000 + i * 256, 256)).toJson());
+					askDevice(new JsonObject().put("request", "readMemory").put("address", 0x8000000 + i * 156)
+							.put("length", 256), reply -> {
+								log.info(" reply " + reply);
+							});
 				}
 				break;
 			}
 
 			case "write": {
-				for (int i = 0; i < 256; i++) {
-					eb.send("proxy",
-							new Request(cmd, Bootloader.WriteMemory.request(0x08000000 + i * 256, new byte[] {}))
-									.toJson());
-				}
+
 				break;
 			}
 
 			case "reset": {
-				eb.send("proxy", new Request(cmd, Bootloader.Reset.request()).toJson());
-				break;
+				askDevice(new JsonObject().put("request", "reset"), reply -> {
+					log.info(" reply " + reply);
+				});break;
 			}
 			case "go": {
-				askDevice(new Request(cmd, Bootloader.Go.request(0x08000000)).toJson(), data -> {
-					Bootloader.Go.parse(data);
+				askDevice(new JsonObject().put("request", "go").put("address", 0x8000000), reply -> {
+					log.info(" reply " + reply);
 				});
 				break;
 			}

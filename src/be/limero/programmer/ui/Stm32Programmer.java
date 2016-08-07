@@ -105,7 +105,7 @@ public class Stm32Programmer extends JFrame {
 				model.setHost(txtHost.getText());
 			}
 		});
-		txtHost.setText("iot.eclipse.org");
+		txtHost.setText("192.168.0.132");
 		txtHost.setBounds(90, 8, 141, 20);
 		contentPane.add(txtHost);
 		txtHost.setColumns(10);
@@ -296,6 +296,15 @@ public class Stm32Programmer extends JFrame {
 				txtLogging.setFont(new Font("Monospaced", Font.PLAIN, 11));
 				scrollPane.setViewportView(txtLogging);
 				txtLogging.setText("Logging");
+				
+				JButton btnErase = new JButton("Erase");
+				btnErase.addActionListener(new ActionListener() {
+					public void actionPerformed(ActionEvent e) {
+						controller.send("erase");
+					}
+				});
+				btnErase.setBounds(486, 70, 91, 23);
+				contentPane.add(btnErase);
 
 	}
 
