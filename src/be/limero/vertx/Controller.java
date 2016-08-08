@@ -4,20 +4,15 @@ import java.util.Arrays;
 import java.util.logging.Logger;
 
 import be.limero.file.FileManager;
-import be.limero.network.Request;
-import be.limero.programmer.Bootloader;
 import be.limero.programmer.Stm32Model;
 import be.limero.programmer.ui.LogHandler;
 import be.limero.programmer.ui.Stm32Programmer;
-import be.limero.util.Bytes;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 
 public class Controller extends AbstractVerticle implements LogHandler.LogLine {
@@ -58,17 +53,17 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 	public void send(String s) {
 		eb.send("controller", s);
 	}
-	// public void askDevice(JsonObject req,
+	// public void askDevice(5000,JsonObject req,
 	// Handler<AsyncResult<Message<JsonObject>>> replyHandler) {
 
 	static int nextId = 0;
 
-	public void askDevice(JsonObject req, Handler<JsonObject> replyHandler) {
+	public void askDevice(int timeout,JsonObject req, Handler<JsonObject> replyHandler) {
 		DeliveryOptions delOp = new DeliveryOptions();
-		delOp.setSendTimeout(5000);
+		delOp.setSendTimeout(timeout);
 		req.put("id", nextId++);
 		eb.send("proxy", req, delOp, resp -> {
-			log.info(" handling " + req.getString("request") + " response");
+//			log.info(" handling " + req.getString("request") + " response");
 			if (resp.succeeded()) {
 				JsonObject json = (JsonObject) resp.result().body();
 				int error = json.getInteger("error");
@@ -100,14 +95,14 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 			String cmd = (String) msg;
 			switch (cmd) {
 			case "connect": {
-				askDevice(new JsonObject().put("request", "connect").put("host", model.getHost()).put("port", model.getPort()), reply -> {
+				askDevice(5000,new JsonObject().put("request", "connect").put("host", model.getHost()).put("port", model.getPort()), reply -> {
 					model.setConnected(reply.getBoolean("connected"));
 
 				});
 				break;
 			}
 			case "disconnect": {
-				askDevice(new JsonObject().put("request", "disconnect"), reply -> {
+				askDevice(5000,new JsonObject().put("request", "disconnect"), reply -> {
 					model.setConnected(reply.getBoolean("connected"));
 
 				});
@@ -116,29 +111,29 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 			}
 
 			case "erase": {
-				askDevice(new JsonObject().put("request", "eraseAll"), reply -> {
-					log.info(" reply " + reply);
+				askDevice(5000,new JsonObject().put("request", "eraseAll"), reply -> {
+//					log.info(" reply " + reply);
 
 				});
 				break;
 			}
 
 			case "get": {
-				askDevice(new JsonObject().put("request", "get"), reply -> {
-					log.info(" reply " + reply);
+				askDevice(5000,new JsonObject().put("request", "get"), reply -> {
+//					log.info(" reply " + reply);
 
 				});
 				break;
 			}
 			case "getId": {
-				askDevice(new JsonObject().put("request", "getId"), reply -> {
-					log.info(" reply " + reply);
+				askDevice(5000,new JsonObject().put("request", "getId"), reply -> {
+//					log.info(" reply " + reply);
 				});
 				break;
 			}
 			case "getVersion": {
-				askDevice(new JsonObject().put("request", "getId"), reply -> {
-					log.info(" reply " + reply);
+				askDevice(5000,new JsonObject().put("request", "getId"), reply -> {
+//					log.info(" reply " + reply);
 				});
 				break;
 			}
@@ -154,9 +149,9 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 						break;
 					// log.info(" length :" + length + " offset : " + offset);
 					byte[] sector = Arrays.copyOfRange(model.getFileMemory(), offset, offset + length);
-					askDevice(new JsonObject().put("request", "writeMemory").put("address", 0x8000000 + offset)
-							.put("length", length), reply -> {
-								log.info(" reply " + reply);
+					askDevice(50000,new JsonObject().put("request", "writeMemory").put("address", 0x8000000 + offset)
+							.put("length", length).put("data",sector), reply -> {
+//								log.info(" reply " + reply);
 							});
 					offset += 256;
 				}
@@ -164,9 +159,9 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 			}
 			case "read": {
 				for (int i = 0; i < 256; i++) {
-					askDevice(new JsonObject().put("request", "readMemory").put("address", 0x8000000 + i * 156)
+					askDevice(50000,new JsonObject().put("request", "readMemory").put("address", 0x8000000 + i * 156)
 							.put("length", 256), reply -> {
-								log.info(" reply " + reply);
+//								log.info(" reply " + reply);
 							});
 				}
 				break;
@@ -178,13 +173,13 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 			}
 
 			case "reset": {
-				askDevice(new JsonObject().put("request", "reset"), reply -> {
-					log.info(" reply " + reply);
+				askDevice(5000,new JsonObject().put("request", "reset"), reply -> {
+//					log.info(" reply " + reply);
 				});break;
 			}
 			case "go": {
-				askDevice(new JsonObject().put("request", "go").put("address", 0x8000000), reply -> {
-					log.info(" reply " + reply);
+				askDevice(5000,new JsonObject().put("request", "go").put("address", 0x8000000), reply -> {
+//					log.info(" reply " + reply);
 				});
 				break;
 			}

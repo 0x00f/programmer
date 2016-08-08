@@ -1,6 +1,5 @@
 package be.limero.vertx;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.logging.Level;
@@ -15,9 +14,7 @@ import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
 
-import be.limero.network.RequestQueue;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
@@ -29,7 +26,6 @@ public class MqttVerticle extends AbstractVerticle implements IMqttActionListene
 	MqttConnectOptions mqttConnectOptions;
 	// static Vertx vertx = Vertx.vertx();
 	private static EventBus eb;
-	RequestQueue queue = new RequestQueue(300);
 	boolean mqttConnected;
 	HashMap<Integer, Message<Object>> replies;
 	Long lastCommand;

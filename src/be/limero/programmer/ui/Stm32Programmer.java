@@ -105,7 +105,7 @@ public class Stm32Programmer extends JFrame {
 				model.setHost(txtHost.getText());
 			}
 		});
-		txtHost.setText("192.168.0.132");
+		txtHost.setText("78.21.112.241");
 		txtHost.setBounds(90, 8, 141, 20);
 		contentPane.add(txtHost);
 		txtHost.setColumns(10);
@@ -134,7 +134,7 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(progressBar);
 
 		txtBinaryFile = new JTextField();
-		txtBinaryFile.setText("C:\\Users\\lieven2\\workspace\\stm32f10x_led\\Debug\\stm32f10x_led.bin");
+		txtBinaryFile.setText("C:\\Data\\lieven\\workspace\\stm32f103_basic_blink\\Debug\\stm32f103_basic_blink.bin");
 		txtBinaryFile.setBounds(90, 39, 386, 20);
 		model.setBinFile(txtBinaryFile.getText());
 		contentPane.add(txtBinaryFile);

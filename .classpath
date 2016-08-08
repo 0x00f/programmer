@@ -13,6 +13,9 @@
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Libraries"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Lombok">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="C:/Data/lieven/Eclipse/eclipse"/>
+		</attributes>
 		<accessrules>
 			<accessrule kind="accessible" pattern="*"/>
 		</accessrules>

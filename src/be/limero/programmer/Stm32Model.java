@@ -45,8 +45,7 @@ public class Stm32Model {
 		status = "undefined status";
 		bootloaderVersion = 0;
 		connected = false;
-		log = "";
-		id = 0;
+		log = "";		id = 0;
 		flashMemory = new byte[0x20000];
 		Arrays.fill(flashMemory, (byte) 0xFF);
 	}

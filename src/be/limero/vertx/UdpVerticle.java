@@ -3,17 +3,11 @@ package be.limero.vertx;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.eclipse.paho.client.mqttv3.IMqttActionListener;
-import org.eclipse.paho.client.mqttv3.IMqttToken;
-
-import be.limero.util.Cbor;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.datagram.DatagramSocket;
 import io.vertx.core.datagram.DatagramSocketOptions;
 import io.vertx.core.eventbus.EventBus;
@@ -21,7 +15,7 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 
 public class UdpVerticle extends AbstractVerticle {
-	private final static Logger log =Logger.getLogger(UdpVerticle.class.toGenericString());
+	private final static Logger log = Logger.getLogger(UdpVerticle.class.toGenericString());
 	DatagramSocket socket;
 	EventBus eb;
 	int remotePort = 1883;
@@ -30,7 +24,8 @@ public class UdpVerticle extends AbstractVerticle {
 	HashMap<Integer, Message<Object>> replies;
 	Long lastCommand;
 	int lastId;
-
+	long udpResponseTimer;
+	int retryCount=0;
 
 	/*
 	 * (non-Javadoc)
@@ -53,7 +48,7 @@ public class UdpVerticle extends AbstractVerticle {
 						onUdpMessage(json);
 					} catch (Exception e) {
 						System.out.println(msg);
-						// log.fatal(" JSON parsing failed "+ e.getMessage());
+						log.fine(" JSON parsing failed " + e.getMessage());
 					}
 
 				});
@@ -66,26 +61,29 @@ public class UdpVerticle extends AbstractVerticle {
 			if (message.body() instanceof JsonObject) {
 				JsonObject json = (JsonObject) message.body();
 				if (json.getString("request") == ("connect")) {
+					log.info(" UDP connect ");
 					remoteHost = json.getString("host");
 					remotePort = json.getInteger("port");
 					message.reply(new JsonObject().put("reply", "connect").put("connected", true).put("error", 0));
 				} else if (json.getString("request") == ("disconnect")) {
 					message.reply(new JsonObject().put("reply", "disconnect").put("connected", false).put("error", 0));
+					log.info(" UDP disconnect ");
 				} else {
 					try {
-						replies.put(json.getInteger("id"),(Message<Object>) message);
-						if (canSendNext()) sendNext();						
+						replies.put(json.getInteger("id"), (Message<Object>) message);
+						if (canSendNext())
+							sendNext();
 					} catch (Exception e) {
 						log.log(Level.SEVERE, " udp send failed ", e);
 					}
-					
+
 				}
 			}
-			log.info("EB : " + message.body());
+			// log.info("EB : " + message.body());
 		});
 
 	}
-	
+
 	boolean canSendNext() {
 		if (lastCommand == null) {
 			lastCommand = System.currentTimeMillis();
@@ -96,21 +94,36 @@ public class UdpVerticle extends AbstractVerticle {
 		}
 		return false;
 	}
-	
-	void sendNext(){
+
+	void sendNext() {
 		try {
-			if ( replies.isEmpty() ) {
-				lastCommand=null;
+			if (replies.isEmpty()) {
+				lastCommand = null;
 				return;
 			}
 			lastCommand = System.currentTimeMillis();
-			Iterator <Message<Object>> it=replies.values().iterator();
+			Iterator<Message<Object>> it = replies.values().iterator();
 			Message<Object> first = it.next();
-			JsonObject json=(JsonObject)first.body();
+			JsonObject json = (JsonObject) first.body();
+			if ( json.getInteger("id") !=  lastId)
+				retryCount=0;
+			lastId = json.getInteger("id");
+			udpResponseTimer = vertx.setTimer(2000, id -> {
+				log.info(" TIMEOUT : retrying !");
+				retryCount++;
+				if (retryCount < 4)
+					sendNext();
+				else {
+					log.info(" cancelling all requests ");
+					replies.clear();
+					retryCount=0;
+				}
+			});
+			log.info(" UDP TXD :" + json);
 			socket.send(json.encode(), remotePort, remoteHost, returnData -> {
 			});
 		} catch (Exception e) {
-			log.log(Level.SEVERE, " send failed.",e);
+			log.log(Level.SEVERE, " send failed.", e);
 		}
 	}
 
@@ -123,13 +136,14 @@ public class UdpVerticle extends AbstractVerticle {
 	}
 
 	void onUdpMessage(JsonObject json) {
-		log.info("UDP : " + json);
+		log.info("UDP RXD : " + json);
 		replies.get(json.getInteger("id")).reply(json);
 		replies.remove(json.getInteger("id"));
-		if ( json.getInteger("error") !=0 ) {
+		vertx.cancelTimer(udpResponseTimer);
+		if (json.getInteger("error") != 0) {
 			log.warning(" error occured , cancelling queue ");
-			replies.forEach((k,message)->{
-				replies.get(k).fail(-1, "previous command failed");										
+			replies.forEach((k, message) -> {
+				replies.get(k).fail(-1, "previous command failed");
 			});
 			replies.clear();
 		}
@@ -147,8 +161,8 @@ public class UdpVerticle extends AbstractVerticle {
 		super.stop();
 	}
 
-	static int nextId=0;
-	
+	static int nextId = 0;
+
 	static long newId() {
 		return nextId++;
 	}
