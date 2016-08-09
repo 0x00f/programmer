@@ -5,6 +5,7 @@ import java.util.logging.Logger;
 
 import be.limero.file.FileManager;
 import be.limero.programmer.Stm32Model;
+import be.limero.programmer.Stm32Model.Verification;
 import be.limero.programmer.ui.LogHandler;
 import be.limero.programmer.ui.Stm32Programmer;
 import io.vertx.core.AbstractVerticle;
@@ -19,6 +20,10 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 	private final static Logger log = Logger.getLogger(Controller.class.toString());
 	static Vertx vertx = Vertx.vertx();
 	private final static EventBus eb = vertx.eventBus();
+
+	final int FLASH_START = 0x08000000;
+	final int FLASH_SECTOR_SIZE = 256;
+	final int FLASH_SIZE = 1024*128;
 
 	Stm32Programmer ui;
 	Stm32Model model;
@@ -58,12 +63,12 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 
 	static int nextId = 0;
 
-	public void askDevice(int timeout,JsonObject req, Handler<JsonObject> replyHandler) {
+	public void askDevice(int timeout, JsonObject req, Handler<JsonObject> replyHandler) {
 		DeliveryOptions delOp = new DeliveryOptions();
 		delOp.setSendTimeout(timeout);
 		req.put("id", nextId++);
 		eb.send("proxy", req, delOp, resp -> {
-//			log.info(" handling " + req.getString("request") + " response");
+			// log.info(" handling " + req.getString("request") + " response");
 			if (resp.succeeded()) {
 				JsonObject json = (JsonObject) resp.result().body();
 				int error = json.getInteger("error");
@@ -76,6 +81,11 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 				log.info(" failed " + req.getString("request") + " " + resp.cause().getMessage());
 			}
 		});
+	}
+
+	public static String byteToHex(byte b) {
+		int i = b & 0xFF;
+		return Integer.toHexString(i);
 	}
 
 	void onEbMessage(Object msg) {
@@ -95,14 +105,15 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 			String cmd = (String) msg;
 			switch (cmd) {
 			case "connect": {
-				askDevice(5000,new JsonObject().put("request", "connect").put("host", model.getHost()).put("port", model.getPort()), reply -> {
-					model.setConnected(reply.getBoolean("connected"));
+				askDevice(5000, new JsonObject().put("request", "connect").put("host", model.getHost()).put("port",
+						model.getPort()), reply -> {
+							model.setConnected(reply.getBoolean("connected"));
 
-				});
+						});
 				break;
 			}
 			case "disconnect": {
-				askDevice(5000,new JsonObject().put("request", "disconnect"), reply -> {
+				askDevice(5000, new JsonObject().put("request", "disconnect"), reply -> {
 					model.setConnected(reply.getBoolean("connected"));
 
 				});
@@ -111,29 +122,29 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 			}
 
 			case "erase": {
-				askDevice(5000,new JsonObject().put("request", "eraseAll"), reply -> {
-//					log.info(" reply " + reply);
+				askDevice(5000, new JsonObject().put("request", "eraseAll"), reply -> {
+					// log.info(" reply " + reply);
 
 				});
 				break;
 			}
 
 			case "get": {
-				askDevice(5000,new JsonObject().put("request", "get"), reply -> {
-//					log.info(" reply " + reply);
+				askDevice(5000, new JsonObject().put("request", "get"), reply -> {
+					// log.info(" reply " + reply);
 
 				});
 				break;
 			}
 			case "getId": {
-				askDevice(5000,new JsonObject().put("request", "getId"), reply -> {
-//					log.info(" reply " + reply);
+				askDevice(5000, new JsonObject().put("request", "getId"), reply -> {
+					// log.info(" reply " + reply);
 				});
 				break;
 			}
 			case "getVersion": {
-				askDevice(5000,new JsonObject().put("request", "getId"), reply -> {
-//					log.info(" reply " + reply);
+				askDevice(5000, new JsonObject().put("request", "getId"), reply -> {
+					// log.info(" reply " + reply);
 				});
 				break;
 			}
@@ -142,27 +153,82 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 				model.setFileMemory(FileManager.loadBinaryFile(model.getBinFile()));
 				log.info(" binary image size : " + model.getFileMemory().length);
 				int offset = 0;
+				int fileLength = model.getFileMemory().length;
 				while (true) {
-					int length = (offset + 256) < model.getFileMemory().length ? 256
-							: model.getFileMemory().length - offset;
-					if (length <= 0)
-						break;
+					final int sectorLength = (offset + FLASH_SECTOR_SIZE) < fileLength ? FLASH_SECTOR_SIZE : model.getFileMemory().length - offset;
 					// log.info(" length :" + length + " offset : " + offset);
-					byte[] sector = Arrays.copyOfRange(model.getFileMemory(), offset, offset + length);
-					askDevice(50000,new JsonObject().put("request", "writeMemory").put("address", 0x8000000 + offset)
-							.put("length", length).put("data",sector), reply -> {
-//								log.info(" reply " + reply);
+					byte[] sector = Arrays.copyOfRange(model.getFileMemory(), offset, offset + sectorLength);
+					askDevice(50000, new JsonObject().put("request", "writeMemory").put("address", FLASH_START + offset)
+							.put("length", sectorLength).put("data", sector), reply -> {
+								int percentage = ((reply.getInteger("address") + FLASH_SECTOR_SIZE - FLASH_START) * 100) / fileLength;
+//								log.info(" percentage :" + percentage + " address : "
+//										+ Integer.toHexString(reply.getInteger("address")) + " length : " + fileLength);
+								model.setProgress(percentage);
+								ui.updateView();
+								// log.info(" reply " + reply);
 							});
-					offset += 256;
+					offset += FLASH_SECTOR_SIZE;
+					if (offset > fileLength)
+						break;
 				}
 				break;
 			}
 			case "read": {
-				for (int i = 0; i < 256; i++) {
-					askDevice(50000,new JsonObject().put("request", "readMemory").put("address", 0x8000000 + i * 156)
-							.put("length", 256), reply -> {
-//								log.info(" reply " + reply);
+				for (int i = 0; i < FLASH_SIZE; i+=FLASH_SECTOR_SIZE) {
+					askDevice(50000, new JsonObject().put("request", "readMemory").put("address", FLASH_START + i)
+							.put("length", FLASH_SECTOR_SIZE), reply -> {
+								// log.info(" reply " + reply);
+								int percentage = ((reply.getInteger("address") + FLASH_SECTOR_SIZE - FLASH_START) * 100) / FLASH_SIZE;
+//								log.info(" percentage :" + percentage + " address : "
+//										+ Integer.toHexString(reply.getInteger("address")) + " length : " + FLASH_SIZE);
+								model.setProgress(percentage);
+								ui.updateView();
+
 							});
+				}
+				break;
+			}
+
+			case "verify": {
+				model.setFileMemory(FileManager.loadBinaryFile(model.getBinFile()));
+				log.info(" binary image size : " + model.getFileMemory().length);
+				int binLength = model.getFileMemory().length;
+
+				int offset = 0;
+				model.setVerification(Verification.OK);
+				while (true) {
+					final int sectorLength = (offset + FLASH_SECTOR_SIZE) < binLength ? FLASH_SECTOR_SIZE : binLength - offset;
+					askDevice(50000, new JsonObject().put("request", "readMemory").put("address", FLASH_START + offset)
+							.put("length", sectorLength), reply -> {
+
+								int address = reply.getInteger("address");
+								byte flashSector[] = reply.getBinary("data");
+
+								int percentage = ((address + FLASH_SECTOR_SIZE - FLASH_START) * 100) / binLength;
+								model.setProgress(percentage);
+								ui.updateView();
+
+								int off = address - FLASH_START;
+								byte binSector[] = Arrays.copyOfRange(model.getFileMemory(), off,
+										off + flashSector.length);
+
+//								log.info(" percentage :" + percentage + " address : " + Integer.toHexString(address)
+//										+ " length : " + binLength + " flash : " + flashSector.length + " bin : "
+//										+ binSector.length);
+								for (int j = 0; j < flashSector.length; j++) {
+									if (flashSector[j] != binSector[j]) {
+										log.info(" flash differs at 0x" + Integer.toHexString(j + off + FLASH_START)
+												+ " flash : 0x" + byteToHex(flashSector[j]) + " bin : 0x"
+												+ byteToHex(binSector[j]));
+										model.setVerification(Verification.FAIL);
+										break;
+									}
+								}
+
+							});
+					offset += FLASH_SECTOR_SIZE;
+					if (offset > binLength)
+						break;
 				}
 				break;
 			}
@@ -173,13 +239,14 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 			}
 
 			case "reset": {
-				askDevice(5000,new JsonObject().put("request", "reset"), reply -> {
-//					log.info(" reply " + reply);
-				});break;
+				askDevice(5000, new JsonObject().put("request", "reset"), reply -> {
+					// log.info(" reply " + reply);
+				});
+				break;
 			}
 			case "go": {
-				askDevice(5000,new JsonObject().put("request", "go").put("address", 0x8000000), reply -> {
-//					log.info(" reply " + reply);
+				askDevice(5000, new JsonObject().put("request", "go").put("address", FLASH_START), reply -> {
+					// log.info(" reply " + reply);
 				});
 				break;
 			}

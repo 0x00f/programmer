@@ -3,6 +3,8 @@ package be.limero.vertx;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -21,11 +23,14 @@ public class UdpVerticle extends AbstractVerticle {
 	int remotePort = 1883;
 	String remoteHost = "192.168.0.132";
 	int localPort = 3881;
-	HashMap<Integer, Message<Object>> replies;
+	// HashMap<Integer, Message<Object>> replies;
+	ArrayBlockingQueue<Message<Object>> queue;
 	Long lastCommand;
 	int lastId;
 	long udpResponseTimer;
-	int retryCount=0;
+	int retryCount = 0;
+	JsonObject outstandingUdp = null;
+	boolean udpReplyPending = false;
 
 	/*
 	 * (non-Javadoc)
@@ -35,7 +40,8 @@ public class UdpVerticle extends AbstractVerticle {
 	@Override
 	public void start() throws Exception {
 		eb = vertx.eventBus();
-		replies = new HashMap<Integer, Message<Object>>();
+		// replies = new HashMap<Integer, Message<Object>>();
+		queue = new ArrayBlockingQueue<Message<Object>>(2048);
 		super.start();
 		socket = vertx.createDatagramSocket(new DatagramSocketOptions());
 		socket.listen(localPort, "0.0.0.0", asyncResult -> {
@@ -60,19 +66,18 @@ public class UdpVerticle extends AbstractVerticle {
 		eb.consumer("proxy", message -> {
 			if (message.body() instanceof JsonObject) {
 				JsonObject json = (JsonObject) message.body();
-				if (json.getString("request") == ("connect")) {
+				if (json.getString("request").equals("connect")) {
 					log.info(" UDP connect ");
 					remoteHost = json.getString("host");
 					remotePort = json.getInteger("port");
 					message.reply(new JsonObject().put("reply", "connect").put("connected", true).put("error", 0));
-				} else if (json.getString("request") == ("disconnect")) {
+				} else if (json.getString("request").equals("disconnect")) {
 					message.reply(new JsonObject().put("reply", "disconnect").put("connected", false).put("error", 0));
 					log.info(" UDP disconnect ");
 				} else {
 					try {
-						replies.put(json.getInteger("id"), (Message<Object>) message);
-						if (canSendNext())
-							sendNext();
+						queue.add(message);
+						sendNext();
 					} catch (Exception e) {
 						log.log(Level.SEVERE, " udp send failed ", e);
 					}
@@ -84,44 +89,51 @@ public class UdpVerticle extends AbstractVerticle {
 
 	}
 
-	boolean canSendNext() {
-		if (lastCommand == null) {
-			lastCommand = System.currentTimeMillis();
-			return true;
-		} else if (lastCommand < (System.currentTimeMillis() - 10)) {
-			lastCommand = System.currentTimeMillis();
-			return true;
+	/*
+	 * on UDP received , check match if ok : remove from queue & reply & send
+	 * Next if nok : ignore on timeout : if pending() : resend on cmd received :
+	 * if (!pending) send();
+	 * 
+	 * on timeout : if ( pending ) send()
+	 * 
+	 */
+
+	void sendUdp(JsonObject json) {
+		try {
+			log.info(" UDP TXD :" + json);
+			udpResponseTimer = vertx.setTimer(2000, id -> {
+				if (retryCount < 4) {
+					log.info(" TIMEOUT : retrying !");
+					udpReplyPending = false;
+					outstandingUdp = null;
+					sendNext();
+				} else {
+					log.info(" to many retries,cancelling all requests ! ");
+					queue.clear();
+					retryCount = 0;
+				}
+			});
+			socket.send(json.encode(), remotePort, remoteHost, returnData -> {
+			});
+			udpReplyPending = true;
+			outstandingUdp = json;
+		} catch (Exception e) {
+			log.log(Level.SEVERE, " send failed.", e);
 		}
-		return false;
 	}
 
 	void sendNext() {
 		try {
-			if (replies.isEmpty()) {
-				lastCommand = null;
+			if (queue.isEmpty()) {
+				outstandingUdp = null;
+				udpReplyPending = false;
 				return;
 			}
-			lastCommand = System.currentTimeMillis();
-			Iterator<Message<Object>> it = replies.values().iterator();
-			Message<Object> first = it.next();
-			JsonObject json = (JsonObject) first.body();
-			if ( json.getInteger("id") !=  lastId)
-				retryCount=0;
-			lastId = json.getInteger("id");
-			udpResponseTimer = vertx.setTimer(2000, id -> {
-				log.info(" TIMEOUT : retrying !");
-				retryCount++;
-				if (retryCount < 4)
-					sendNext();
-				else {
-					log.info(" cancelling all requests ");
-					replies.clear();
-					retryCount=0;
-				}
-			});
-			log.info(" UDP TXD :" + json);
-			socket.send(json.encode(), remotePort, remoteHost, returnData -> {
-			});
+			if (!udpReplyPending) {
+				Message<Object> message = queue.peek();
+				JsonObject json = (JsonObject) message.body();
+				sendUdp(json);
+			}
 		} catch (Exception e) {
 			log.log(Level.SEVERE, " send failed.", e);
 		}
@@ -136,18 +148,33 @@ public class UdpVerticle extends AbstractVerticle {
 	}
 
 	void onUdpMessage(JsonObject json) {
-		log.info("UDP RXD : " + json);
-		replies.get(json.getInteger("id")).reply(json);
-		replies.remove(json.getInteger("id"));
-		vertx.cancelTimer(udpResponseTimer);
-		if (json.getInteger("error") != 0) {
-			log.warning(" error occured , cancelling queue ");
-			replies.forEach((k, message) -> {
-				replies.get(k).fail(-1, "previous command failed");
-			});
-			replies.clear();
+		try {
+			log.info("UDP RXD : " + json);
+			if (queue.isEmpty()) {
+				log.info("------------------ UDP received after all reply ,ignored double ");
+				return;
+			}
+			if (outstandingUdp.getInteger("id").equals(json.getInteger("id"))) {
+				queue.take().reply(json);
+				retryCount = 0;
+				outstandingUdp = null;
+				udpReplyPending = false;
+				vertx.cancelTimer(udpResponseTimer);
+			} else {
+				log.info("-------------- UDP received no matching in queue, pending : "
+						+ outstandingUdp.getInteger("id") + " received : " + json.getInteger("id"));
+			}
+			if (json.getInteger("error") != 0) {
+				log.warning(" error occured , cancelling queue ");
+				while (!queue.isEmpty()) {
+					Message<Object> msg = queue.take();
+					msg.fail(-1, "previous command failed");
+				}
+			}
+			sendNext();
+		} catch (Exception e) {
+			log.log(Level.SEVERE, " udp message handling fails ", e);
 		}
-		sendNext();
 	}
 
 	/*
@@ -161,12 +188,6 @@ public class UdpVerticle extends AbstractVerticle {
 		super.stop();
 	}
 
-	static int nextId = 0;
-
-	static long newId() {
-		return nextId++;
-	}
-
 	public static void main(String[] args) {
 		System.setProperty("java.util.logging.SimpleFormatter.format", "%1$tF %1$tT %4$s %2$s %5$s%6$s%n");
 		UdpVerticle udp = new UdpVerticle();
@@ -178,29 +199,30 @@ public class UdpVerticle extends AbstractVerticle {
 
 		EventBus eb = udp.getVertx().eventBus();
 		int interval = 1000;
+		int nextId = 0;
 		while (true) {
 			try {
 				Thread.sleep(interval);
-				eb.send("proxy", new JsonObject().put("request", "status").put("id", newId()));
-				eb.send("proxy", new JsonObject().put("request", "reset").put("id", newId()));
-				eb.send("proxy", new JsonObject().put("request", "getId").put("id", newId()));
-				eb.send("proxy", new JsonObject().put("request", "get").put("id", newId()));
+				eb.send("proxy", new JsonObject().put("request", "status").put("id", nextId++));
+				eb.send("proxy", new JsonObject().put("request", "reset").put("id", nextId++));
+				eb.send("proxy", new JsonObject().put("request", "getId").put("id", nextId++));
+				eb.send("proxy", new JsonObject().put("request", "get").put("id", nextId++));
 				eb.send("proxy", new JsonObject().put("request", "readMemory").put("address", 0x08000000)
-						.put("length", 256).put("id", newId()));
+						.put("length", 256).put("id", nextId++));
 				eb.send("proxy", new JsonObject().put("request", "writeMemory").put("address", 0x08000000)
-						.put("data", new byte[] { 1, 2, 3, 4 }).put("id", newId()));
+						.put("data", new byte[] { 1, 2, 3, 4 }).put("id", nextId++));
 				eb.send("proxy", new JsonObject().put("request", "readMemory").put("address", 0x08000000)
-						.put("length", 256).put("id", newId()));
+						.put("length", 256).put("id", nextId++));
 				eb.send("proxy", new JsonObject().put("request", "eraseMemory")
-						.put("pages", new byte[] { 0, 1, 2, 3, 4 }).put("id", newId()));
+						.put("pages", new byte[] { 0, 1, 2, 3, 4 }).put("id", nextId++));
 				eb.send("proxy", new JsonObject().put("request", "readMemory").put("address", 0x08000000)
-						.put("length", 256).put("id", newId()));
+						.put("length", 256).put("id", nextId++));
 				eb.send("proxy", new JsonObject().put("request", "writeMemory").put("address", 0x08000000)
-						.put("data", new byte[] { 1, 2, 3, 4 }).put("id", newId()));
-				eb.send("proxy", new JsonObject().put("request", "eraseAll").put("id", newId()));
+						.put("data", new byte[] { 1, 2, 3, 4 }).put("id", nextId++));
+				eb.send("proxy", new JsonObject().put("request", "eraseAll").put("id", nextId++));
 				eb.send("proxy", new JsonObject().put("request", "readMemory").put("address", 0x08000000)
-						.put("length", 256).put("id", newId()));
-				eb.send("proxy", new JsonObject().put("request", "go").put("address", 0x08000000).put("id", newId()));
+						.put("length", 256).put("id", nextId++));
+				eb.send("proxy", new JsonObject().put("request", "go").put("address", 0x08000000).put("id", nextId++));
 				Thread.sleep(20000);
 			} catch (Exception e) {
 			}

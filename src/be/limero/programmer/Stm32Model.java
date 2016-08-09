@@ -28,7 +28,13 @@ public class Stm32Model {
 	byte[] flashMemory;
 	byte[] fileMemory;
 	int heapSize;
-	
+
+	public enum Verification {
+		NA, OK, FAIL
+	};
+
+	Verification verification;
+
 	private PropertyChangeSupport pcs = new PropertyChangeSupport(this);
 
 	public void addPropertyChangeListener(PropertyChangeListener pcl) {
@@ -45,8 +51,10 @@ public class Stm32Model {
 		status = "undefined status";
 		bootloaderVersion = 0;
 		connected = false;
-		log = "";		id = 0;
+		log = "";
+		id = 0;
 		flashMemory = new byte[0x20000];
 		Arrays.fill(flashMemory, (byte) 0xFF);
+		verification=Verification.NA;
 	}
 }

@@ -1,6 +1,7 @@
 package be.limero.programmer.ui;
 
 
+import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
@@ -25,6 +26,7 @@ import javax.swing.border.EmptyBorder;
 
 import be.limero.file.FileManager;
 import be.limero.programmer.Stm32Model;
+import be.limero.programmer.Stm32Model.Verification;
 import be.limero.vertx.Controller;
 
 public class Stm32Programmer extends JFrame {
@@ -67,7 +69,7 @@ public class Stm32Programmer extends JFrame {
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
-		System.setProperty("java.util.logging.SimpleFormatter.format", "%1$tF %1$tT %4$s %2$s %5$s%6$s%n");
+		System.setProperty("java.util.logging.SimpleFormatter.format", "%1$tF %1$tT.%1$tL %4$s %2$s %5$s%6$s%n");
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
@@ -130,6 +132,7 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(lblStatus);
 
 		progressBar = new JProgressBar();
+		progressBar.setValue(10);
 		progressBar.setBounds(10, 396, 688, 14);
 		contentPane.add(progressBar);
 
@@ -333,6 +336,13 @@ public class Stm32Programmer extends JFrame {
 				getProgressBar().setValue(model.getProgress());
 				txtLogging.setText(model.getLog());
 				txtBinaryFile.setText(model.getBinFile());
+				if ( model.getVerification() == Verification.OK ) {
+					getBtnVerify().setBackground(Color.GREEN);
+				} else if ( model.getVerification() == Verification.FAIL ) {
+					getBtnVerify().setBackground(Color.RED);
+				} else if ( model.getVerification() == Verification.NA ) {
+					getBtnVerify().setBackground(Color.GRAY);
+				}
 			}
 
 		});
