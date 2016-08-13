@@ -107,7 +107,7 @@ public class Stm32Programmer extends JFrame {
 				model.setHost(txtHost.getText());
 			}
 		});
-		txtHost.setText("78.21.112.241");
+		txtHost.setText("192.168.0.132");
 		txtHost.setBounds(90, 8, 141, 20);
 		contentPane.add(txtHost);
 		txtHost.setColumns(10);
@@ -137,7 +137,7 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(progressBar);
 
 		txtBinaryFile = new JTextField();
-		txtBinaryFile.setText("C:\\Data\\lieven\\workspace\\stm32f103_basic_blink\\Debug\\stm32f103_basic_blink.bin");
+		txtBinaryFile.setText("C:\\Users\\lieven2\\Atollic\\TrueSTUDIO\\ARM_workspace_5.4\\opencm3\\Debug\\opencm3.elf.binary");
 		txtBinaryFile.setBounds(90, 39, 386, 20);
 		model.setBinFile(txtBinaryFile.getText());
 		contentPane.add(txtBinaryFile);
@@ -215,7 +215,12 @@ public class Stm32Programmer extends JFrame {
 		btnVerify.setBounds(305, 70, 70, 23);
 		contentPane.add(btnVerify);
 
-		JButton btnDoItAll = new JButton("Do it all");
+		JButton btnDoItAll = new JButton("Status");
+		btnDoItAll.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				controller.send("status");
+			}
+		});
 		btnDoItAll.setBounds(385, 70, 89, 23);
 		contentPane.add(btnDoItAll);
 
@@ -308,6 +313,15 @@ public class Stm32Programmer extends JFrame {
 				});
 				btnErase.setBounds(486, 70, 91, 23);
 				contentPane.add(btnErase);
+				
+				JButton btnBaudrate = new JButton("Baudrate");
+				btnBaudrate.addActionListener(new ActionListener() {
+					public void actionPerformed(ActionEvent e) {
+						controller.send("baudrate");
+					}
+				});
+				btnBaudrate.setBounds(484, 95, 91, 23);
+				contentPane.add(btnBaudrate);
 
 	}
 

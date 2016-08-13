@@ -44,7 +44,7 @@ public class UdpVerticle extends AbstractVerticle {
 		queue = new ArrayBlockingQueue<Message<Object>>(2048);
 		super.start();
 		socket = vertx.createDatagramSocket(new DatagramSocketOptions());
-		socket.listen(localPort, "0.0.0.0", asyncResult -> {
+		socket.listen(localPort, "192.168.0.209", asyncResult -> {
 			if (asyncResult.succeeded()) {
 				socket.handler(packet -> {
 					String msg = new String(packet.data().getBytes(), StandardCharsets.UTF_8);
@@ -54,7 +54,7 @@ public class UdpVerticle extends AbstractVerticle {
 						onUdpMessage(json);
 					} catch (Exception e) {
 						System.out.println(msg);
-						log.fine(" JSON parsing failed " + e.getMessage());
+//						log.log(Level.SEVERE," JSON parsing failed " + e.getMessage());
 					}
 
 				});
@@ -106,6 +106,7 @@ public class UdpVerticle extends AbstractVerticle {
 					log.info(" TIMEOUT : retrying !");
 					udpReplyPending = false;
 					outstandingUdp = null;
+					retryCount++;
 					sendNext();
 				} else {
 					log.info(" to many retries,cancelling all requests ! ");
