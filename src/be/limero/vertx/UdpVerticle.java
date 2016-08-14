@@ -53,8 +53,10 @@ public class UdpVerticle extends AbstractVerticle {
 						JsonObject json = new JsonObject(msg);
 						onUdpMessage(json);
 					} catch (Exception e) {
-						System.out.println(msg);
-//						log.log(Level.SEVERE," JSON parsing failed " + e.getMessage());
+//						System.out.println(msg);
+						eb.send("controller", new JsonObject().put("request", "log").put("data", msg));
+						// log.log(Level.SEVERE," JSON parsing failed " +
+						// e.getMessage());
 					}
 
 				});

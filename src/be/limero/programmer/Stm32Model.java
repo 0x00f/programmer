@@ -28,6 +28,7 @@ public class Stm32Model {
 	byte[] flashMemory;
 	byte[] fileMemory;
 	int heapSize;
+	boolean autoProgram;
 
 	public enum Verification {
 		NA, OK, FAIL
@@ -56,5 +57,6 @@ public class Stm32Model {
 		flashMemory = new byte[0x20000];
 		Arrays.fill(flashMemory, (byte) 0xFF);
 		verification=Verification.NA;
+		autoProgram=false;
 	}
 }

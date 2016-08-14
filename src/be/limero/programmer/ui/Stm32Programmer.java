@@ -28,6 +28,7 @@ import be.limero.file.FileManager;
 import be.limero.programmer.Stm32Model;
 import be.limero.programmer.Stm32Model.Verification;
 import be.limero.vertx.Controller;
+import javax.swing.JCheckBox;
 
 public class Stm32Programmer extends JFrame {
 
@@ -38,9 +39,6 @@ public class Stm32Programmer extends JFrame {
 	// private EventBus eb = Vertx.factory.vertx().eventBus();
 	private Controller controller;
 	private JLabel lblDeviceInfo;
-	private JRadioButton rdbtnReset;
-	private JRadioButton rdbtnProgram;
-	private JRadioButton rdbtnVerify;
 	private JRadioButton rdbtnGo;
 	private JLabel lblStatus;
 	private JProgressBar progressBar;
@@ -224,24 +222,12 @@ public class Stm32Programmer extends JFrame {
 		btnDoItAll.setBounds(385, 70, 89, 23);
 		contentPane.add(btnDoItAll);
 
-		rdbtnReset = new JRadioButton("Reset");
-		rdbtnReset.setBounds(600, 69, 109, 23);
-		contentPane.add(rdbtnReset);
-
-		rdbtnProgram = new JRadioButton("Program");
-		rdbtnProgram.setBounds(600, 95, 109, 23);
-		contentPane.add(rdbtnProgram);
-
-		rdbtnVerify = new JRadioButton("Verify");
-		rdbtnVerify.setBounds(600, 121, 109, 23);
-		contentPane.add(rdbtnVerify);
-
-		rdbtnGo = new JRadioButton("Go");
-		rdbtnGo.setBounds(600, 41, 109, 23);
+		rdbtnGo = new JRadioButton("AutoProgram");
+		rdbtnGo.setBounds(581, 38, 109, 23);
 		contentPane.add(rdbtnGo);
 
 		lblDeviceInfo = new JLabel("BootloaderVersion");
-		lblDeviceInfo.setBounds(10, 99, 584, 14);
+		lblDeviceInfo.setBounds(10, 104, 584, 14);
 		contentPane.add(lblDeviceInfo);
 
 		JButton btnEnterBootloader = new JButton("Bootloader init");
@@ -320,8 +306,20 @@ public class Stm32Programmer extends JFrame {
 						controller.send("baudrate");
 					}
 				});
-				btnBaudrate.setBounds(484, 95, 91, 23);
+				btnBaudrate.setBounds(587, 70, 91, 23);
 				contentPane.add(btnBaudrate);
+				
+				JCheckBox chckbxAutoprogram = new JCheckBox("AutoProgram");
+				chckbxAutoprogram.addActionListener(new ActionListener() {
+					
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						getStm32Model().setAutoProgram(chckbxAutoprogram.isSelected());
+						
+					}
+				});
+				chckbxAutoprogram.setBounds(555, 121, 97, 23);
+				contentPane.add(chckbxAutoprogram);
 
 	}
 

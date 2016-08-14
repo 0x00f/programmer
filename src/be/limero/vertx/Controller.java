@@ -1,6 +1,8 @@
 package be.limero.vertx;
 
+import java.io.File;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.logging.Logger;
 
 import be.limero.file.FileManager;
@@ -27,6 +29,8 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 
 	Stm32Programmer ui;
 	Stm32Model model;
+	long fileCheckTimer;
+	long fileLastModified;
 	// MqttVerticle proxy;
 
 	public Controller(Stm32Programmer ui) {
@@ -43,6 +47,17 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 			});
 			vertx.deployVerticle(this);
 			vertx.deployVerticle(new UdpVerticle());
+			fileCheckTimer = vertx.setPeriodic(1000, id -> {
+				long fileTime = new File(model.getBinFile()).lastModified();
+				if (model.isAutoProgram() & fileTime > fileLastModified) {
+					eb.send("controller", "reset");
+					eb.send("controller", "getId");
+					eb.send("controller", "erase");
+					eb.send("controller", "program");
+					eb.send("controller", "go");
+				}
+				fileLastModified = fileTime;
+			});
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -100,7 +115,7 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 	}
 
 	void onEbMessage(Object msg) {
-		log.info(" controller received :" + msg);
+		// log.info(" controller received :" + msg);
 		if (msg instanceof JsonObject) {
 			JsonObject json = (JsonObject) msg;
 			if (json.containsKey("reply")) {
@@ -110,6 +125,11 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 					model.setConnected(json.getBoolean("connected"));
 					break;
 				}
+				}
+			} else if (json.containsKey("request")) {
+				if (json.getString("request").equals("log")) {
+					model.setLog(model.getLog() + json.getString("data"));
+					ui.updateView();
 				}
 			}
 		} else if (msg instanceof String) {
@@ -174,6 +194,8 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 					final int sectorLength = (offset + FLASH_SECTOR_SIZE) < fileLength ? FLASH_SECTOR_SIZE
 							: model.getFileMemory().length - offset;
 					// log.info(" length :" + length + " offset : " + offset);
+					if (sectorLength == 0)
+						break;
 					byte[] sector = Arrays.copyOfRange(model.getFileMemory(), offset, offset + sectorLength);
 					askDevice(50000, new JsonObject().put("request", "writeMemory").put("address", FLASH_START + offset)
 							.put("length", sectorLength).put("data", sector), reply -> {
@@ -280,7 +302,7 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 				});
 				break;
 			}
-			case "baudrate":{
+			case "baudrate": {
 				askDevice(5000, new JsonObject().put("request", "settings").put("baudrate", 460800), reply -> {
 					// log.info(" reply " + reply);
 				});
