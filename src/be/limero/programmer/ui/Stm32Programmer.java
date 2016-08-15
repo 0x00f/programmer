@@ -28,7 +28,11 @@ import be.limero.file.FileManager;
 import be.limero.programmer.Stm32Model;
 import be.limero.programmer.Stm32Model.Verification;
 import be.limero.vertx.Controller;
+import io.vertx.core.json.JsonObject;
+
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.DefaultComboBoxModel;
 
 public class Stm32Programmer extends JFrame {
 
@@ -59,6 +63,7 @@ public class Stm32Programmer extends JFrame {
 	 * @wbp.nonvisual location=19,511
 	 */
 	private final Stm32Model model = new Stm32Model();
+	private JTextArea txtUart;
 
 
 
@@ -168,22 +173,22 @@ public class Stm32Programmer extends JFrame {
 		btnBrowse.setBounds(486, 38, 89, 23);
 		contentPane.add(btnBrowse);
 
-		btnReset = new JButton("Reset");
+		btnReset = new JButton("resetBootloader");
 		btnReset.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				controller.send("reset");
+				controller.send("resetBootloader");
 			}
 		});
-		btnReset.setBounds(10, 70, 63, 23);
+		btnReset.setBounds(10, 70, 127, 23);
 		contentPane.add(btnReset);
 
 		btnGo = new JButton("Go");
 		btnGo.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				controller.send("go");
+				controller.send("goFlash");
 			}
 		});
-		btnGo.setBounds(81, 70, 56, 23);
+		btnGo.setBounds(147, 104, 56, 23);
 		contentPane.add(btnGo);
 
 		btnProgram = new JButton("Program");
@@ -224,19 +229,27 @@ public class Stm32Programmer extends JFrame {
 
 		rdbtnGo = new JRadioButton("AutoProgram");
 		rdbtnGo.setBounds(581, 38, 109, 23);
+		rdbtnGo.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				model.setAutoProgram(rdbtnGo.isSelected());
+				
+			}
+		});
 		contentPane.add(rdbtnGo);
 
 		lblDeviceInfo = new JLabel("BootloaderVersion");
-		lblDeviceInfo.setBounds(10, 104, 584, 14);
+		lblDeviceInfo.setBounds(142, 421, 584, 14);
 		contentPane.add(lblDeviceInfo);
 
-		JButton btnEnterBootloader = new JButton("Bootloader init");
+		JButton btnEnterBootloader = new JButton("resetFlash");
 		btnEnterBootloader.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				controller.send("enterBootloader");
+				controller.send("resetFlash");
 			}
 		});
-		btnEnterBootloader.setBounds(10, 121, 172, 23);
+		btnEnterBootloader.setBounds(10, 104, 127, 23);
 		contentPane.add(btnEnterBootloader);
 
 		btnGetid = new JButton("GetID");
@@ -245,16 +258,16 @@ public class Stm32Programmer extends JFrame {
 				controller.send("getId");
 			}
 		});
-		btnGetid.setBounds(291, 121, 89, 23);
+		btnGetid.setBounds(291, 104, 89, 23);
 		contentPane.add(btnGetid);
 
-		btnGetversioncommands = new JButton("GetVersionCommands");
+		btnGetversioncommands = new JButton("GetVersion");
 		btnGetversioncommands.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				controller.send("getVersion");
 			}
 		});
-		btnGetversioncommands.setBounds(390, 121, 150, 23);
+		btnGetversioncommands.setBounds(395, 104, 109, 23);
 		contentPane.add(btnGetversioncommands);
 
 		JLabel lblPort = new JLabel("Port");
@@ -279,14 +292,15 @@ public class Stm32Programmer extends JFrame {
 				controller.send("get");
 			}
 		});
-		btnGet.setBounds(192, 121, 89, 23);
+		btnGet.setBounds(221, 104, 60, 23);
 		contentPane.add(btnGet);
 		
 		JScrollPane scrollPane = new JScrollPane();
-		scrollPane.setBounds(10, 162, 688, 223);
+		scrollPane.setBounds(10, 162, 688, 95);
 		contentPane.add(scrollPane);
 		
 				txtLogging = new JTextArea();
+				txtLogging.setRows(1000);
 				txtLogging.setFont(new Font("Monospaced", Font.PLAIN, 11));
 				scrollPane.setViewportView(txtLogging);
 				txtLogging.setText("Logging");
@@ -300,15 +314,6 @@ public class Stm32Programmer extends JFrame {
 				btnErase.setBounds(486, 70, 91, 23);
 				contentPane.add(btnErase);
 				
-				JButton btnBaudrate = new JButton("Baudrate");
-				btnBaudrate.addActionListener(new ActionListener() {
-					public void actionPerformed(ActionEvent e) {
-						controller.send("baudrate");
-					}
-				});
-				btnBaudrate.setBounds(587, 70, 91, 23);
-				contentPane.add(btnBaudrate);
-				
 				JCheckBox chckbxAutoprogram = new JCheckBox("AutoProgram");
 				chckbxAutoprogram.addActionListener(new ActionListener() {
 					
@@ -318,8 +323,30 @@ public class Stm32Programmer extends JFrame {
 						
 					}
 				});
-				chckbxAutoprogram.setBounds(555, 121, 97, 23);
+				chckbxAutoprogram.setBounds(510, 104, 97, 23);
 				contentPane.add(chckbxAutoprogram);
+				
+				JComboBox<String> cbBaudrate = new JComboBox<String>();
+				cbBaudrate.setModel(new DefaultComboBoxModel<String>(new String[] {"23800", "57600", "115200", "230400", "460800", "921600"}));
+				cbBaudrate.setSelectedIndex(2);
+				cbBaudrate.setBounds(591, 70, 107, 22);
+				cbBaudrate.addActionListener(new ActionListener() {
+					
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						controller.send(new JsonObject().put("request","settings").put("baudrate",Integer.valueOf((String) cbBaudrate.getSelectedItem())));
+						
+					}
+				});
+				contentPane.add(cbBaudrate);
+				
+				JScrollPane scrollPane_1 = new JScrollPane();
+				scrollPane_1.setBounds(10, 268, 688, 117);
+				contentPane.add(scrollPane_1);
+				
+				txtUart = new JTextArea();
+				txtUart.setRows(1000);
+				scrollPane_1.setViewportView(txtUart);
 
 	}
 
@@ -347,6 +374,8 @@ public class Stm32Programmer extends JFrame {
 				getLblStatus().setText(model.getStatus());
 				getProgressBar().setValue(model.getProgress());
 				txtLogging.setText(model.getLog());
+				txtUart.setText(model.getUartLog());
+
 				txtBinaryFile.setText(model.getBinFile());
 				if ( model.getVerification() == Verification.OK ) {
 					getBtnVerify().setBackground(Color.GREEN);
@@ -370,18 +399,6 @@ public class Stm32Programmer extends JFrame {
 
 	public JTextField getTxtBinaryFile() {
 		return txtBinaryFile;
-	}
-
-	public JRadioButton getRdbtnReset() {
-		return rdbtnReset;
-	}
-
-	public JRadioButton getRdbtnProgram() {
-		return rdbtnProgram;
-	}
-
-	public JRadioButton getRdbtnVerify() {
-		return rdbtnVerify;
 	}
 
 	public JRadioButton getRdbtnGo() {
@@ -430,5 +447,8 @@ public class Stm32Programmer extends JFrame {
 
 	public Stm32Model getStm32Model() {
 		return model;
+	}
+	public JTextArea getTxtUart() {
+		return txtUart;
 	}
 }

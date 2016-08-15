@@ -15,6 +15,7 @@ import lombok.experimental.Accessors;
 public class Stm32Model {
 
 	String log;
+	String uartLog;
 	String status;
 	String host;
 	int port;
@@ -29,6 +30,7 @@ public class Stm32Model {
 	byte[] fileMemory;
 	int heapSize;
 	boolean autoProgram;
+	int baudrate;
 
 	public enum Verification {
 		NA, OK, FAIL

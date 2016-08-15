@@ -44,7 +44,7 @@ public class UdpVerticle extends AbstractVerticle {
 		queue = new ArrayBlockingQueue<Message<Object>>(2048);
 		super.start();
 		socket = vertx.createDatagramSocket(new DatagramSocketOptions());
-		socket.listen(localPort, "192.168.0.209", asyncResult -> {
+		socket.listen(localPort, "0.0.0.0", asyncResult -> {
 			if (asyncResult.succeeded()) {
 				socket.handler(packet -> {
 					String msg = new String(packet.data().getBytes(), StandardCharsets.UTF_8);
@@ -53,10 +53,9 @@ public class UdpVerticle extends AbstractVerticle {
 						JsonObject json = new JsonObject(msg);
 						onUdpMessage(json);
 					} catch (Exception e) {
-//						System.out.println(msg);
-						eb.send("controller", new JsonObject().put("request", "log").put("data", msg));
-						// log.log(Level.SEVERE," JSON parsing failed " +
-						// e.getMessage());
+						// System.out.println(msg);
+						eb.send("controller", new JsonObject().put("from", "UDP").put("request", "log").put("data",
+								packet.data().getBytes()));
 					}
 
 				});

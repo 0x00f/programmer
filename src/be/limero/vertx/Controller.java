@@ -1,6 +1,7 @@
 package be.limero.vertx;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.logging.Logger;
@@ -50,11 +51,11 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 			fileCheckTimer = vertx.setPeriodic(1000, id -> {
 				long fileTime = new File(model.getBinFile()).lastModified();
 				if (model.isAutoProgram() & fileTime > fileLastModified) {
-					eb.send("controller", "reset");
-					eb.send("controller", "getId");
+					eb.send("controller", "resetBootLoader");
+					eb.send("controller", "get");
 					eb.send("controller", "erase");
 					eb.send("controller", "program");
-					eb.send("controller", "go");
+					eb.send("controller", "resetFlash");
 				}
 				fileLastModified = fileTime;
 			});
@@ -71,6 +72,10 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 	}
 
 	public void send(String s) {
+		eb.send("controller", s);
+	}
+
+	public void send(JsonObject s) {
 		eb.send("controller", s);
 	}
 	// public void askDevice(5000,JsonObject req,
@@ -115,7 +120,7 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 	}
 
 	void onEbMessage(Object msg) {
-		// log.info(" controller received :" + msg);
+		log.info(" controller received :" + msg);
 		if (msg instanceof JsonObject) {
 			JsonObject json = (JsonObject) msg;
 			if (json.containsKey("reply")) {
@@ -128,8 +133,14 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 				}
 			} else if (json.containsKey("request")) {
 				if (json.getString("request").equals("log")) {
-					model.setLog(model.getLog() + json.getString("data"));
+					model.setUartLog(model.getUartLog() + new String(json.getBinary("data"), StandardCharsets.UTF_8));
 					ui.updateView();
+				} else if (json.getString("request").equals("settings")) {
+					askDevice(5000, json, reply -> {
+						if (reply.containsKey("baudrate"))
+							model.setBaudrate(reply.getInteger("baudrate"));
+
+					});
 				}
 			}
 		} else if (msg instanceof String) {
@@ -153,15 +164,20 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 			}
 
 			case "erase": {
-				byte[] cmds = model.getCommands();
-				for (int i = 0; i < cmds.length; i++) {
-					if (cmds[i] == 0x43)
-						askDevice(5000, new JsonObject().put("request", "eraseAll"), reply -> {
-						});
-					else if (cmds[i] == 0x44)
-						askDevice(5000, new JsonObject().put("request", "extendedEraseMemory"), reply -> {
-						});
-				}
+				askDevice(5000, new JsonObject().put("request", "get"), reply -> {
+					log.info(" cmds :" + bytesToHex(reply.getBinary("cmds")));
+					model.setCommands(reply.getBinary("cmds"));
+					byte[] cmds = model.getCommands();
+					for (int i = 0; i < cmds.length; i++) {
+						if (cmds[i] == 0x43)
+							askDevice(5000, new JsonObject().put("request", "eraseAll"), reply1 -> {
+							});
+						else if (cmds[i] == 0x44)
+							askDevice(5000, new JsonObject().put("request", "extendedEraseMemory"), reply1 -> {
+							});
+					}
+				});
+
 				break;
 			}
 
@@ -179,7 +195,7 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 				break;
 			}
 			case "getVersion": {
-				askDevice(5000, new JsonObject().put("request", "getId"), reply -> {
+				askDevice(5000, new JsonObject().put("request", "getVersion"), reply -> {
 					// log.info(" reply " + reply);
 				});
 				break;
@@ -290,14 +306,20 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 				break;
 			}
 
-			case "reset": {
-				askDevice(5000, new JsonObject().put("request", "reset"), reply -> {
+			case "resetBootloader": {
+				askDevice(5000, new JsonObject().put("request", "resetBootloader"), reply -> {
 					// log.info(" reply " + reply);
 				});
 				break;
 			}
-			case "go": {
-				askDevice(5000, new JsonObject().put("request", "go").put("address", FLASH_START), reply -> {
+			case "resetFlash": {
+				askDevice(5000, new JsonObject().put("request", "resetFlash"), reply -> {
+					// log.info(" reply " + reply);
+				});
+				break;
+			}
+			case "goFlash": {
+				askDevice(5000, new JsonObject().put("request", "goFlash").put("address", FLASH_START), reply -> {
 					// log.info(" reply " + reply);
 				});
 				break;
