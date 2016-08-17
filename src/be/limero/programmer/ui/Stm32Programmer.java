@@ -1,6 +1,5 @@
 package be.limero.programmer.ui;
 
-
 import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.Font;
@@ -64,9 +63,6 @@ public class Stm32Programmer extends JFrame {
 	 */
 	private final Stm32Model model = new Stm32Model();
 	private JTextArea txtUart;
-
-
-
 
 	/**
 	 * Launch the application.
@@ -140,7 +136,8 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(progressBar);
 
 		txtBinaryFile = new JTextField();
-		txtBinaryFile.setText("C:\\Users\\lieven2\\Atollic\\TrueSTUDIO\\ARM_workspace_5.4\\opencm3\\Debug\\opencm3.elf.binary");
+		txtBinaryFile.setText(
+				"C:\\Users\\lieven2\\Atollic\\TrueSTUDIO\\ARM_workspace_5.4\\opencm3\\Debug\\opencm3.elf.binary");
 		txtBinaryFile.setBounds(90, 39, 386, 20);
 		model.setBinFile(txtBinaryFile.getText());
 		contentPane.add(txtBinaryFile);
@@ -154,20 +151,20 @@ public class Stm32Programmer extends JFrame {
 		JButton btnBrowse = new JButton("Browse...");
 		btnBrowse.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				//Handle open button action.
-			    if (e.getSource() == btnBrowse) {
-			        int returnVal = fc.showOpenDialog(Stm32Programmer.this);
+				// Handle open button action.
+				if (e.getSource() == btnBrowse) {
+					int returnVal = fc.showOpenDialog(Stm32Programmer.this);
 
-			        if (returnVal == JFileChooser.APPROVE_OPTION) {
-			            File file = fc.getSelectedFile();
-			            //This is where a real application would open the file.
-			            log.info("Opening: " + file.getName() );
-			            model.setBinFile(file.getAbsolutePath());
-			            updateView();
-			        } else {
-			            log.info("Open command cancelled by user.");
-			        }
-			   }
+					if (returnVal == JFileChooser.APPROVE_OPTION) {
+						File file = fc.getSelectedFile();
+						// This is where a real application would open the file.
+						log.info("Opening: " + file.getName());
+						model.setBinFile(file.getAbsolutePath());
+						updateView();
+					} else {
+						log.info("Open command cancelled by user.");
+					}
+				}
 			}
 		});
 		btnBrowse.setBounds(486, 38, 89, 23);
@@ -230,11 +227,11 @@ public class Stm32Programmer extends JFrame {
 		rdbtnGo = new JRadioButton("AutoProgram");
 		rdbtnGo.setBounds(581, 38, 109, 23);
 		rdbtnGo.addActionListener(new ActionListener() {
-			
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				model.setAutoProgram(rdbtnGo.isSelected());
-				
+
 			}
 		});
 		contentPane.add(rdbtnGo);
@@ -261,10 +258,10 @@ public class Stm32Programmer extends JFrame {
 		btnGetid.setBounds(291, 104, 89, 23);
 		contentPane.add(btnGetid);
 
-		btnGetversioncommands = new JButton("GetVersion");
+		btnGetversioncommands = new JButton("Program & Start");
 		btnGetversioncommands.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				controller.send("getVersion");
+				controller.send("autoProgram");
 			}
 		});
 		btnGetversioncommands.setBounds(395, 104, 109, 23);
@@ -294,59 +291,61 @@ public class Stm32Programmer extends JFrame {
 		});
 		btnGet.setBounds(221, 104, 60, 23);
 		contentPane.add(btnGet);
-		
+
 		JScrollPane scrollPane = new JScrollPane();
 		scrollPane.setBounds(10, 162, 688, 95);
 		contentPane.add(scrollPane);
-		
-				txtLogging = new JTextArea();
-				txtLogging.setRows(1000);
-				txtLogging.setFont(new Font("Monospaced", Font.PLAIN, 11));
-				scrollPane.setViewportView(txtLogging);
-				txtLogging.setText("Logging");
-				
-				JButton btnErase = new JButton("Erase");
-				btnErase.addActionListener(new ActionListener() {
-					public void actionPerformed(ActionEvent e) {
-						controller.send("erase");
-					}
-				});
-				btnErase.setBounds(486, 70, 91, 23);
-				contentPane.add(btnErase);
-				
-				JCheckBox chckbxAutoprogram = new JCheckBox("AutoProgram");
-				chckbxAutoprogram.addActionListener(new ActionListener() {
-					
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						getStm32Model().setAutoProgram(chckbxAutoprogram.isSelected());
-						
-					}
-				});
-				chckbxAutoprogram.setBounds(510, 104, 97, 23);
-				contentPane.add(chckbxAutoprogram);
-				
-				JComboBox<String> cbBaudrate = new JComboBox<String>();
-				cbBaudrate.setModel(new DefaultComboBoxModel<String>(new String[] {"23800", "57600", "115200", "230400", "460800", "921600"}));
-				cbBaudrate.setSelectedIndex(2);
-				cbBaudrate.setBounds(591, 70, 107, 22);
-				cbBaudrate.addActionListener(new ActionListener() {
-					
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						controller.send(new JsonObject().put("request","settings").put("baudrate",Integer.valueOf((String) cbBaudrate.getSelectedItem())));
-						
-					}
-				});
-				contentPane.add(cbBaudrate);
-				
-				JScrollPane scrollPane_1 = new JScrollPane();
-				scrollPane_1.setBounds(10, 268, 688, 117);
-				contentPane.add(scrollPane_1);
-				
-				txtUart = new JTextArea();
-				txtUart.setRows(1000);
-				scrollPane_1.setViewportView(txtUart);
+
+		txtLogging = new JTextArea();
+		txtLogging.setRows(1000);
+		txtLogging.setFont(new Font("Monospaced", Font.PLAIN, 11));
+		scrollPane.setViewportView(txtLogging);
+		txtLogging.setText("Logging");
+
+		JButton btnErase = new JButton("Erase");
+		btnErase.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				controller.send("erase");
+			}
+		});
+		btnErase.setBounds(486, 70, 91, 23);
+		contentPane.add(btnErase);
+
+		JCheckBox chckbxAutoprogram = new JCheckBox("AutoProgram");
+		chckbxAutoprogram.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				getStm32Model().setAutoProgram(chckbxAutoprogram.isSelected());
+
+			}
+		});
+		chckbxAutoprogram.setBounds(510, 104, 97, 23);
+		contentPane.add(chckbxAutoprogram);
+
+		JComboBox<String> cbBaudrate = new JComboBox<String>();
+		cbBaudrate.setModel(new DefaultComboBoxModel<String>(
+				new String[] { "23800", "57600", "115200", "230400", "460800", "921600" }));
+		cbBaudrate.setSelectedIndex(2);
+		cbBaudrate.setBounds(591, 70, 107, 22);
+		cbBaudrate.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				controller.send(new JsonObject().put("request", "settings").put("baudrate",
+						Integer.valueOf((String) cbBaudrate.getSelectedItem())));
+
+			}
+		});
+		contentPane.add(cbBaudrate);
+
+		JScrollPane scrollPane_1 = new JScrollPane();
+		scrollPane_1.setBounds(10, 268, 688, 117);
+		contentPane.add(scrollPane_1);
+
+		txtUart = new JTextArea();
+		txtUart.setRows(1000);
+		scrollPane_1.setViewportView(txtUart);
 
 	}
 
@@ -354,9 +353,9 @@ public class Stm32Programmer extends JFrame {
 		EventQueue.invokeLater(new Runnable() {
 
 			public void run() {
-				boolean enableButton=false;
+				boolean enableButton = false;
 				if (model.getConnected()) {
-					enableButton=true;
+					enableButton = true;
 					getBtnConnect().setText("Disconnect");
 				} else {
 					getBtnConnect().setText("Connect");
@@ -370,22 +369,40 @@ public class Stm32Programmer extends JFrame {
 				getBtnReset().setEnabled(enableButton);
 				getBtnVerify().setEnabled(enableButton);
 
-//				lblDeviceInfo.setText(model.getId());
+				// lblDeviceInfo.setText(model.getId());
 				getLblStatus().setText(model.getStatus());
 				getProgressBar().setValue(model.getProgress());
-				txtLogging.setText(model.getLog());
-				txtUart.setText(model.getUartLog());
+				// txtLogging.setText(model.getLog());
+				// txtUart.setText(model.getUartLog());
 
 				txtBinaryFile.setText(model.getBinFile());
-				if ( model.getVerification() == Verification.OK ) {
+				if (model.getVerification() == Verification.OK) {
 					getBtnVerify().setBackground(Color.GREEN);
-				} else if ( model.getVerification() == Verification.FAIL ) {
+				} else if (model.getVerification() == Verification.FAIL) {
 					getBtnVerify().setBackground(Color.RED);
-				} else if ( model.getVerification() == Verification.NA ) {
+				} else if (model.getVerification() == Verification.NA) {
 					getBtnVerify().setBackground(Color.GRAY);
 				}
 			}
 
+		});
+	}
+
+	public void addLog(String type, String text) {
+		EventQueue.invokeLater(new Runnable() {
+
+			public void run() {
+				if (type == "local") {
+					txtLogging.append(text);
+                    int len = txtLogging.getDocument().getLength();
+                    txtLogging.setCaretPosition(len);
+				}
+				if (type == "remote") {
+					txtUart.append(text);
+					int len = txtUart.getDocument().getLength();
+					txtUart.setCaretPosition(len);
+				}
+			}
 		});
 	}
 
@@ -420,27 +437,35 @@ public class Stm32Programmer extends JFrame {
 	public JButton getBtnConnect() {
 		return btnConnect;
 	}
+
 	public JButton getBtnReset() {
 		return btnReset;
 	}
+
 	public JButton getBtnGo() {
 		return btnGo;
 	}
+
 	public JButton getBtnProgram() {
 		return btnProgram;
 	}
+
 	public JButton getBtnRead() {
 		return btnRead;
 	}
+
 	public JButton getBtnGet() {
 		return btnGet;
 	}
+
 	public JButton getBtnGetid() {
 		return btnGetid;
 	}
+
 	public JButton getBtnGetversioncommands() {
 		return btnGetversioncommands;
 	}
+
 	public JButton getBtnVerify() {
 		return btnVerify;
 	}
@@ -448,6 +473,7 @@ public class Stm32Programmer extends JFrame {
 	public Stm32Model getStm32Model() {
 		return model;
 	}
+
 	public JTextArea getTxtUart() {
 		return txtUart;
 	}

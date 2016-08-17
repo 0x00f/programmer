@@ -6,17 +6,21 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.logging.Logger;
 
+import org.omg.CosNaming._NamingContextExtStub;
+
 import be.limero.file.FileManager;
 import be.limero.programmer.Stm32Model;
 import be.limero.programmer.Stm32Model.Verification;
 import be.limero.programmer.ui.LogHandler;
 import be.limero.programmer.ui.Stm32Programmer;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 
 public class Controller extends AbstractVerticle implements LogHandler.LogLine {
@@ -24,9 +28,25 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 	static Vertx vertx = Vertx.vertx();
 	private final static EventBus eb = vertx.eventBus();
 
+	DeliveryOptions opt = new DeliveryOptions();
+
 	final int FLASH_START = 0x08000000;
 	final int FLASH_SECTOR_SIZE = 256;
 	final int FLASH_SIZE = 1024 * 128;
+
+	enum Code {
+		OK, FAIL
+	};
+
+	class Result {
+		Result(Code c, String m) {
+			code = c;
+			message = m;
+		}
+
+		public Code code;
+		public String message;
+	}
 
 	Stm32Programmer ui;
 	Stm32Model model;
@@ -43,7 +63,7 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 			lh.register(this);
 
 			eb.consumer("controller", message -> {
-				onEbMessage(message.body());
+				onEbMessage(message);
 				ui.updateView();
 			});
 			vertx.deployVerticle(this);
@@ -51,11 +71,10 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 			fileCheckTimer = vertx.setPeriodic(1000, id -> {
 				long fileTime = new File(model.getBinFile()).lastModified();
 				if (model.isAutoProgram() & fileTime > fileLastModified) {
-					eb.send("controller", "resetBootLoader");
-					eb.send("controller", "get");
-					eb.send("controller", "erase");
-					eb.send("controller", "program");
-					eb.send("controller", "resetFlash");
+					send("controller", "autoProgram", 20000, reply -> {
+					}, fail -> {
+					});
+
 				}
 				fileLastModified = fileTime;
 			});
@@ -64,26 +83,37 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 		}
 	}
 
-	@Override
-	public void log(String line) {
-		model.setLog(model.getLog() + "\n" + line);
-		ui.updateView();
-
-	}
-
 	public void send(String s) {
 		eb.send("controller", s);
 	}
 
-	public void send(JsonObject s) {
-		eb.send("controller", s);
+	public void send(JsonObject json) {
+		eb.send("controller", json);
 	}
-	// public void askDevice(5000,JsonObject req,
-	// Handler<AsyncResult<Message<JsonObject>>> replyHandler) {
+
+	@Override
+	public void log(String line) {
+		ui.addLog("local", line + "\n");
+		// model.setLog(model.getLog() + "\n" + line);
+		ui.updateView();
+
+	}
+
+	JsonObject request(String req) {
+		return new JsonObject().put("request", req).put("id", nextId++);
+	}
+
+	boolean goodResult(AsyncResult<Message<Object>> reply) {
+		if (reply.succeeded() && (reply.result() instanceof JsonObject)
+				&& ((JsonObject) reply.result()).containsKey("error")
+				&& ((JsonObject) reply.result()).getInteger("error") == 0)
+			return true;
+		return false;
+	}
 
 	static int nextId = 0;
 
-	public void askDevice(int timeout, JsonObject req, Handler<JsonObject> replyHandler) {
+	public void askDevice2(int timeout, JsonObject req, Handler<JsonObject> replyHandler) {
 		DeliveryOptions delOp = new DeliveryOptions();
 		delOp.setSendTimeout(timeout);
 		req.put("id", nextId++);
@@ -99,6 +129,20 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 				}
 			} else if (resp.failed()) {
 				log.info(" failed " + req.getString("request") + " " + resp.cause().getMessage());
+			}
+		});
+	}
+
+	void send(String address, Object message, int timeout, Handler<JsonObject> okHandler,
+			Handler<JsonObject> failHandler) {
+		opt.setSendTimeout(timeout);
+		eb.send(address, message, opt, reply -> {
+			if (reply.succeeded()) {
+				okHandler.handle((JsonObject) reply.result().body());
+			} else {
+				if (failHandler != null) {
+					failHandler.handle(new JsonObject().put("error", -1));
+				}
 			}
 		});
 	}
@@ -119,10 +163,11 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 
 	}
 
-	void onEbMessage(Object msg) {
-		log.info(" controller received :" + msg);
-		if (msg instanceof JsonObject) {
-			JsonObject json = (JsonObject) msg;
+	void onEbMessage(Message<Object> msg) {
+
+		log.info(" controller received :" + msg.body());
+		if (msg.body() instanceof JsonObject) {
+			JsonObject json = (JsonObject) msg.body();
 			if (json.containsKey("reply")) {
 				String cmd = json.getString("reply");
 				switch (cmd) {
@@ -133,70 +178,87 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 				}
 			} else if (json.containsKey("request")) {
 				if (json.getString("request").equals("log")) {
-					model.setUartLog(model.getUartLog() + new String(json.getBinary("data"), StandardCharsets.UTF_8));
+					ui.addLog("remote", new String(json.getBinary("data"), StandardCharsets.UTF_8));
+					// model.setUartLog(model.getUartLog() + new
+					// String(json.getBinary("data"), StandardCharsets.UTF_8));
 					ui.updateView();
 				} else if (json.getString("request").equals("settings")) {
-					askDevice(5000, json, reply -> {
+					send("proxy", json, 1000, reply -> {
 						if (reply.containsKey("baudrate"))
 							model.setBaudrate(reply.getInteger("baudrate"));
-
+						msg.reply(reply);
+					}, fail -> {
+						msg.fail(-1, "failed");
 					});
 				}
 			}
-		} else if (msg instanceof String) {
-			String cmd = (String) msg;
+		} else if (msg.body() instanceof String) {
+			String cmd = (String) msg.body();
 			switch (cmd) {
 			case "connect": {
-				askDevice(5000, new JsonObject().put("request", "connect").put("host", model.getHost()).put("port",
-						model.getPort()), reply -> {
+				send("proxy", request("connect").put("host", model.getHost()).put("port", model.getPort()), 1000,
+						reply -> {
 							model.setConnected(reply.getBoolean("connected"));
-
+							msg.reply(reply);
+						}, fail -> {
+							msg.fail(-1, "failed");
 						});
 				break;
 			}
 			case "disconnect": {
-				askDevice(5000, new JsonObject().put("request", "disconnect"), reply -> {
-					model.setConnected(reply.getBoolean("connected"));
-
-				});
-
+				send("proxy", request("disconnect").put("host", model.getHost()).put("port", model.getPort()), 1000,
+						reply -> {
+							model.setConnected(reply.getBoolean("connected"));
+							msg.reply(reply);
+						}, fail -> {
+							msg.fail(-1, "failed");
+						});
 				break;
 			}
 
 			case "erase": {
-				askDevice(5000, new JsonObject().put("request", "get"), reply -> {
-					log.info(" cmds :" + bytesToHex(reply.getBinary("cmds")));
-					model.setCommands(reply.getBinary("cmds"));
-					byte[] cmds = model.getCommands();
-					for (int i = 0; i < cmds.length; i++) {
-						if (cmds[i] == 0x43)
-							askDevice(5000, new JsonObject().put("request", "eraseAll"), reply1 -> {
-							});
-						else if (cmds[i] == 0x44)
-							askDevice(5000, new JsonObject().put("request", "extendedEraseMemory"), reply1 -> {
-							});
-					}
-				});
-
+				byte[] cmds = model.getCommands();
+				for (int i = 0; i < cmds.length; i++) {
+					if (cmds[i] == 0x43)
+						send("proxy", request("eraseAll"), 1000, ok -> {
+							msg.reply(ok);
+						}, fail -> {
+							msg.fail(-1, "failed");
+						});
+					else if (cmds[i] == 0x44)
+						send("proxy", request("extendedEraseMemory"), 1000, ok -> {
+							msg.reply(ok);
+						}, fail -> {
+							msg.fail(-1, "failed");
+						});
+				}
 				break;
 			}
 
 			case "get": {
-				askDevice(5000, new JsonObject().put("request", "get"), reply -> {
+				send("proxy", request("get"), 1000, reply -> {
 					log.info(" cmds :" + bytesToHex(reply.getBinary("cmds")));
 					model.setCommands(reply.getBinary("cmds"));
+					msg.reply(reply);
+				}, fail -> {
+					msg.fail(-1, "failed");
 				});
 				break;
 			}
 			case "getId": {
-				askDevice(5000, new JsonObject().put("request", "getId"), reply -> {
+				send("proxy", request("getId"), 1000, reply -> {
 					log.info(" chipId :" + Integer.toHexString(reply.getInteger("chipId")));
+					msg.reply(reply);
+				}, fail -> {
+					msg.fail(-1, "failed");
 				});
 				break;
 			}
 			case "getVersion": {
-				askDevice(5000, new JsonObject().put("request", "getVersion"), reply -> {
-					// log.info(" reply " + reply);
+				send("proxy", request("getVersion"), 1000, reply -> {
+					msg.reply(reply);
+				}, fail -> {
+					msg.fail(-1, "failed");
 				});
 				break;
 			}
@@ -213,8 +275,15 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 					if (sectorLength == 0)
 						break;
 					byte[] sector = Arrays.copyOfRange(model.getFileMemory(), offset, offset + sectorLength);
-					askDevice(50000, new JsonObject().put("request", "writeMemory").put("address", FLASH_START + offset)
-							.put("length", sectorLength).put("data", sector), reply -> {
+					send("proxy", request("writeMemory").put("request", "writeMemory")
+							.put("address", FLASH_START + offset).put("length", sectorLength).put("data", sector), 1000,
+							reply -> {
+								// askDevice(50000, new
+								// JsonObject().put("request",
+								// "writeMemory").put("address", FLASH_START +
+								// offset)
+								// .put("length", sectorLength).put("data",
+								// sector), reply -> {
 								int percentage = ((reply.getInteger("address") + FLASH_SECTOR_SIZE - FLASH_START) * 100)
 										/ fileLength;
 								// log.info(" percentage :" + percentage + "
@@ -225,6 +294,9 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 								model.setProgress(percentage);
 								ui.updateView();
 								// log.info(" reply " + reply);
+								msg.reply(reply);
+							}, fail -> {
+								msg.fail(-1, "failed");
 							});
 					offset += FLASH_SECTOR_SIZE;
 					if (offset > fileLength)
@@ -234,20 +306,16 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 			}
 			case "read": {
 				for (int i = 0; i < FLASH_SIZE; i += FLASH_SECTOR_SIZE) {
-					askDevice(50000, new JsonObject().put("request", "readMemory").put("address", FLASH_START + i)
-							.put("length", FLASH_SECTOR_SIZE), reply -> {
-								// log.info(" reply " + reply);
-								int percentage = ((reply.getInteger("address") + FLASH_SECTOR_SIZE - FLASH_START) * 100)
-										/ FLASH_SIZE;
-								// log.info(" percentage :" + percentage + "
-								// address : "
-								// +
-								// Integer.toHexString(reply.getInteger("address"))
-								// + " length : " + FLASH_SIZE);
-								model.setProgress(percentage);
-								ui.updateView();
+					send("proxy", request("readMemory").put("address", FLASH_START + i), 1000, reply -> {
+						int percentage = ((reply.getInteger("address") + FLASH_SECTOR_SIZE - FLASH_START) * 100)
+								/ FLASH_SIZE;
+						model.setProgress(percentage);
+						ui.updateView();
+						msg.reply(reply);
 
-							});
+					}, fail -> {
+						msg.fail(-1, "failed");
+					});
 				}
 				break;
 			}
@@ -262,8 +330,15 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 				while (true) {
 					final int sectorLength = (offset + FLASH_SECTOR_SIZE) < binLength ? FLASH_SECTOR_SIZE
 							: binLength - offset;
-					askDevice(50000, new JsonObject().put("request", "readMemory").put("address", FLASH_START + offset)
-							.put("length", sectorLength), reply -> {
+					send("proxy",
+							request("readMemory").put("address", FLASH_START + offset).put("length", sectorLength),
+							1000, reply -> {
+
+								// askDevice(50000, new
+								// JsonObject().put("request",
+								// "readMemory").put("address", FLASH_START +
+								// offset)
+								// .put("length", sectorLength), reply -> {
 
 								int address = reply.getInteger("address");
 								byte flashSector[] = reply.getBinary("data");
@@ -290,7 +365,9 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 										break;
 									}
 								}
-
+								msg.reply(reply);
+							}, fail -> {
+								msg.fail(-1, "failed");
 							});
 					offset += FLASH_SECTOR_SIZE;
 					if (offset > binLength)
@@ -300,37 +377,95 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 			}
 
 			case "status": {
-				askDevice(5000, new JsonObject().put("request", "status"), reply -> {
-					// log.info(" reply " + reply);
+				send("proxy", request("status"), 1000, ok -> {
+					msg.reply(ok);
+				}, fail -> {
+					msg.fail(-1, "failed");
 				});
 				break;
 			}
 
 			case "resetBootloader": {
-				askDevice(5000, new JsonObject().put("request", "resetBootloader"), reply -> {
-					// log.info(" reply " + reply);
+				/*
+				 * askDevice(5000, , reply -> { msg.reply(new
+				 * JsonObject().put("error", 0)); });
+				 */
+				send("proxy", request("resetBootloader"), 1000, ok -> {
+					send("controller", "get", 1000, ok2 -> {
+						send("controller", "getId", 1000, ok3 -> {
+							send("controller", "getVersion", 1000, ok4 -> {
+								msg.reply(ok4);
+							}, fail -> {
+								msg.fail(-1, "failed");
+							});
+						}, fail -> {
+							msg.fail(-1, "failed");
+						});
+					}, fail -> {
+						msg.fail(-1, "failed");
+					});
+				}, fail -> {
+					msg.fail(-1, "failed");
+				});
+				break;
+			}
+			case "autoProgram": {
+				/*
+				 * askDevice(5000, , reply -> { msg.reply(new
+				 * JsonObject().put("error", 0)); });
+				 */
+				send("controller", "resetBootloader", 1000, ok -> {
+					send("controller", "erase", 1000, ok2 -> {
+						send("controller", "program", 1000, ok3 -> {
+							send("controller", "resetFlash", 1000, ok4 -> {
+								msg.reply(ok4);
+							}, fail -> {
+								msg.fail(-1, "failed");
+							});
+						}, fail -> {
+							msg.fail(-1, "failed");
+						});
+					}, fail -> {
+						msg.fail(-1, "failed");
+					});
+				}, fail -> {
+					msg.fail(-1, "failed");
 				});
 				break;
 			}
 			case "resetFlash": {
-				askDevice(5000, new JsonObject().put("request", "resetFlash"), reply -> {
-					// log.info(" reply " + reply);
+				send("proxy", request("resetFlash"), 1000, ok -> {
+					msg.reply(ok);
+				}, fail -> {
+					msg.fail(-1, "failed");
 				});
 				break;
 			}
 			case "goFlash": {
-				askDevice(5000, new JsonObject().put("request", "goFlash").put("address", FLASH_START), reply -> {
-					// log.info(" reply " + reply);
+				send("proxy", request("goFlash").put("address", FLASH_START), 1000, ok -> {
+					msg.reply(ok);
+				}, fail -> {
+					msg.fail(-1, "failed");
 				});
 				break;
 			}
 			case "baudrate": {
-				askDevice(5000, new JsonObject().put("request", "settings").put("baudrate", 460800), reply -> {
-					// log.info(" reply " + reply);
+				send("proxy", request("settings").put("baudrate", 460800), 1000, ok -> {
+					msg.reply(ok);
+				}, fail -> {
+					msg.fail(-1, "failed");
 				});
 				break;
 			}
+			default: {
+				log.info("unknown command");
+				;
 			}
+			}
+		} else
+
+		{
+			log.info("unknown message : " + msg.body());
 		}
 	}
 
