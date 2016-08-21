@@ -42,7 +42,6 @@ public class Stm32Programmer extends JFrame {
 	// private EventBus eb = Vertx.factory.vertx().eventBus();
 	private Controller controller;
 	private JLabel lblDeviceInfo;
-	private JRadioButton rdbtnGo;
 	private JLabel lblStatus;
 	private JProgressBar progressBar;
 	private JTextArea txtLogging;
@@ -54,8 +53,6 @@ public class Stm32Programmer extends JFrame {
 	private JButton btnGo;
 	private JButton btnProgram;
 	private JButton btnRead;
-	private JButton btnGet;
-	private JButton btnGetid;
 	private JButton btnGetversioncommands;
 	private JButton btnVerify;
 	/**
@@ -63,6 +60,7 @@ public class Stm32Programmer extends JFrame {
 	 */
 	private final Stm32Model model = new Stm32Model();
 	private JTextArea txtUart;
+	private JButton btnErase;
 
 	/**
 	 * Launch the application.
@@ -127,7 +125,7 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(btnConnect);
 
 		lblStatus = new JLabel("Status");
-		lblStatus.setBounds(10, 421, 688, 14);
+		lblStatus.setBounds(235, 425, 463, 14);
 		contentPane.add(lblStatus);
 
 		progressBar = new JProgressBar();
@@ -194,7 +192,7 @@ public class Stm32Programmer extends JFrame {
 				controller.send("program");
 			}
 		});
-		btnProgram.setBounds(147, 70, 75, 23);
+		btnProgram.setBounds(247, 70, 75, 23);
 		contentPane.add(btnProgram);
 
 		btnRead = new JButton("Read");
@@ -203,7 +201,7 @@ public class Stm32Programmer extends JFrame {
 				controller.send("read");
 			}
 		});
-		btnRead.setBounds(232, 70, 63, 23);
+		btnRead.setBounds(412, 70, 63, 23);
 		contentPane.add(btnRead);
 
 		btnVerify = new JButton("Verify");
@@ -212,7 +210,7 @@ public class Stm32Programmer extends JFrame {
 				controller.send("verify");
 			}
 		});
-		btnVerify.setBounds(305, 70, 70, 23);
+		btnVerify.setBounds(332, 70, 70, 23);
 		contentPane.add(btnVerify);
 
 		JButton btnDoItAll = new JButton("Status");
@@ -221,23 +219,11 @@ public class Stm32Programmer extends JFrame {
 				controller.send("status");
 			}
 		});
-		btnDoItAll.setBounds(385, 70, 89, 23);
+		btnDoItAll.setBounds(332, 104, 89, 23);
 		contentPane.add(btnDoItAll);
 
-		rdbtnGo = new JRadioButton("AutoProgram");
-		rdbtnGo.setBounds(581, 38, 109, 23);
-		rdbtnGo.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				model.setAutoProgram(rdbtnGo.isSelected());
-
-			}
-		});
-		contentPane.add(rdbtnGo);
-
-		lblDeviceInfo = new JLabel("BootloaderVersion");
-		lblDeviceInfo.setBounds(142, 421, 584, 14);
+		lblDeviceInfo = new JLabel("deviceInfo");
+		lblDeviceInfo.setBounds(10, 425, 215, 14);
 		contentPane.add(lblDeviceInfo);
 
 		JButton btnEnterBootloader = new JButton("resetFlash");
@@ -249,22 +235,13 @@ public class Stm32Programmer extends JFrame {
 		btnEnterBootloader.setBounds(10, 104, 127, 23);
 		contentPane.add(btnEnterBootloader);
 
-		btnGetid = new JButton("GetID");
-		btnGetid.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				controller.send("getId");
-			}
-		});
-		btnGetid.setBounds(291, 104, 89, 23);
-		contentPane.add(btnGetid);
-
 		btnGetversioncommands = new JButton("Program & Start");
 		btnGetversioncommands.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				controller.send("autoProgram");
 			}
 		});
-		btnGetversioncommands.setBounds(395, 104, 109, 23);
+		btnGetversioncommands.setBounds(213, 104, 109, 23);
 		contentPane.add(btnGetversioncommands);
 
 		JLabel lblPort = new JLabel("Port");
@@ -283,15 +260,6 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(textPort);
 		textPort.setColumns(10);
 
-		btnGet = new JButton("Get");
-		btnGet.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-				controller.send("get");
-			}
-		});
-		btnGet.setBounds(221, 104, 60, 23);
-		contentPane.add(btnGet);
-
 		JScrollPane scrollPane = new JScrollPane();
 		scrollPane.setBounds(10, 162, 688, 95);
 		contentPane.add(scrollPane);
@@ -302,13 +270,13 @@ public class Stm32Programmer extends JFrame {
 		scrollPane.setViewportView(txtLogging);
 		txtLogging.setText("Logging");
 
-		JButton btnErase = new JButton("Erase");
+		btnErase = new JButton("Erase");
 		btnErase.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				controller.send("erase");
 			}
 		});
-		btnErase.setBounds(486, 70, 91, 23);
+		btnErase.setBounds(147, 70, 91, 23);
 		contentPane.add(btnErase);
 
 		JCheckBox chckbxAutoprogram = new JCheckBox("AutoProgram");
@@ -320,20 +288,20 @@ public class Stm32Programmer extends JFrame {
 
 			}
 		});
-		chckbxAutoprogram.setBounds(510, 104, 97, 23);
+		chckbxAutoprogram.setBounds(486, 70, 97, 23);
 		contentPane.add(chckbxAutoprogram);
 
 		JComboBox<String> cbBaudrate = new JComboBox<String>();
 		cbBaudrate.setModel(new DefaultComboBoxModel<String>(
 				new String[] { "23800", "57600", "115200", "230400", "460800", "921600" }));
 		cbBaudrate.setSelectedIndex(2);
-		cbBaudrate.setBounds(591, 70, 107, 22);
+		cbBaudrate.setBounds(515, 104, 107, 22);
 		cbBaudrate.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				controller.send(new JsonObject().put("request", "settings").put("baudrate",
-						Integer.valueOf((String) cbBaudrate.getSelectedItem())));
+				getStm32Model().setBaudrate(Integer.valueOf((String) cbBaudrate.getSelectedItem()));
+				controller.send("baudrate");
 
 			}
 		});
@@ -346,6 +314,10 @@ public class Stm32Programmer extends JFrame {
 		txtUart = new JTextArea();
 		txtUart.setRows(1000);
 		scrollPane_1.setViewportView(txtUart);
+		
+		JLabel lblUartBaudrate = new JLabel("UART Baudrate");
+		lblUartBaudrate.setBounds(430, 108, 75, 14);
+		contentPane.add(lblUartBaudrate);
 
 	}
 
@@ -360,20 +332,18 @@ public class Stm32Programmer extends JFrame {
 				} else {
 					getBtnConnect().setText("Connect");
 				}
-				getBtnGet().setEnabled(enableButton);
-				getBtnGetid().setEnabled(enableButton);
 				getBtnGetversioncommands().setEnabled(enableButton);
 				getBtnGo().setEnabled(enableButton);
 				getBtnProgram().setEnabled(enableButton);
 				getBtnRead().setEnabled(enableButton);
 				getBtnReset().setEnabled(enableButton);
 				getBtnVerify().setEnabled(enableButton);
+				getBtnErase().setEnabled(enableButton && (model.getCommands() != null ));
 
-				// lblDeviceInfo.setText(model.getId());
-				getLblStatus().setText(model.getStatus());
+				getLblStatus().setText(model.getStatus().toString());
 				getProgressBar().setValue(model.getProgress());
-				// txtLogging.setText(model.getLog());
-				// txtUart.setText(model.getUartLog());
+				getLblDeviceInfo().setText(model.getDeviceInfo());
+		
 
 				txtBinaryFile.setText(model.getBinFile());
 				if (model.getVerification() == Verification.OK) {
@@ -406,7 +376,7 @@ public class Stm32Programmer extends JFrame {
 		});
 	}
 
-	protected JLabel getLblBootloaderversion() {
+	protected JLabel getLblDeviceInfo() {
 		return lblDeviceInfo;
 	}
 
@@ -418,9 +388,6 @@ public class Stm32Programmer extends JFrame {
 		return txtBinaryFile;
 	}
 
-	public JRadioButton getRdbtnGo() {
-		return rdbtnGo;
-	}
 
 	public JLabel getLblStatus() {
 		return lblStatus;
@@ -454,13 +421,6 @@ public class Stm32Programmer extends JFrame {
 		return btnRead;
 	}
 
-	public JButton getBtnGet() {
-		return btnGet;
-	}
-
-	public JButton getBtnGetid() {
-		return btnGetid;
-	}
 
 	public JButton getBtnGetversioncommands() {
 		return btnGetversioncommands;
@@ -476,5 +436,8 @@ public class Stm32Programmer extends JFrame {
 
 	public JTextArea getTxtUart() {
 		return txtUart;
+	}
+	public JButton getBtnErase() {
+		return btnErase;
 	}
 }

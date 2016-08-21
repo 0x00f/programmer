@@ -6,6 +6,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 
+import io.vertx.core.json.JsonObject;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,8 +17,8 @@ public class Stm32Model {
 
 	String log;
 	String uartLog;
-	String status;
 	String host;
+	String deviceInfo;
 	int port;
 	byte bootloaderVersion;
 	short pid;
@@ -31,6 +32,7 @@ public class Stm32Model {
 	int heapSize;
 	boolean autoProgram;
 	int baudrate;
+	JsonObject status;
 
 	public enum Verification {
 		NA, OK, FAIL
@@ -51,7 +53,7 @@ public class Stm32Model {
 	public Stm32Model() {
 
 		progress = 0;
-		status = "undefined status";
+		status = new JsonObject();
 		bootloaderVersion = 0;
 		connected = false;
 		log = "";

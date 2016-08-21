@@ -10,6 +10,7 @@ import java.util.logging.Logger;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Vertx;
+import io.vertx.core.datagram.DatagramPacket;
 import io.vertx.core.datagram.DatagramSocket;
 import io.vertx.core.datagram.DatagramSocketOptions;
 import io.vertx.core.eventbus.EventBus;
@@ -32,6 +33,27 @@ public class UdpVerticle extends AbstractVerticle {
 	JsonObject outstandingUdp = null;
 	boolean udpReplyPending = false;
 
+	void udpListen() {
+		socket = vertx.createDatagramSocket(new DatagramSocketOptions());
+
+		socket.listen(localPort, "0.0.0.0", asyncResult -> {
+			if (asyncResult.succeeded()) {
+				log.info(" UDP listening 0.0.0.0:"+localPort);
+				socket.handler(packet -> {
+					onUdpMessage(packet);
+
+				});
+			} else {
+				log.info("Listen failed" + asyncResult.cause());
+			}
+		});
+
+	}
+
+	void udpUnlisten() {
+		socket.close();
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -43,37 +65,20 @@ public class UdpVerticle extends AbstractVerticle {
 		// replies = new HashMap<Integer, Message<Object>>();
 		queue = new ArrayBlockingQueue<Message<Object>>(2048);
 		super.start();
-		socket = vertx.createDatagramSocket(new DatagramSocketOptions());
-		socket.listen(localPort, "0.0.0.0", asyncResult -> {
-			if (asyncResult.succeeded()) {
-				socket.handler(packet -> {
-					String msg = new String(packet.data().getBytes(), StandardCharsets.UTF_8);
-					// log.info("UDP RXD :"+msg);
-					try {
-						JsonObject json = new JsonObject(msg);
-						onUdpMessage(json);
-					} catch (Exception e) {
-						// System.out.println(msg);
-						eb.send("controller", new JsonObject().put("from", "UDP").put("request", "log").put("data",
-								packet.data().getBytes()));
-					}
-
-				});
-			} else {
-				log.info("Listen failed" + asyncResult.cause());
-			}
-		});
 
 		eb.consumer("proxy", message -> {
 			if (message.body() instanceof JsonObject) {
 				JsonObject json = (JsonObject) message.body();
 				if (json.getString("request").equals("connect")) {
-					log.info(" UDP connect ");
 					remoteHost = json.getString("host");
 					remotePort = json.getInteger("port");
+					log.info(" UDP connect "+remoteHost+":"+remotePort);
+					udpListen();
+
 					message.reply(new JsonObject().put("reply", "connect").put("connected", true).put("error", 0));
 				} else if (json.getString("request").equals("disconnect")) {
 					message.reply(new JsonObject().put("reply", "disconnect").put("connected", false).put("error", 0));
+					udpUnlisten();
 					log.info(" UDP disconnect ");
 				} else {
 					try {
@@ -149,34 +154,45 @@ public class UdpVerticle extends AbstractVerticle {
 		log.info(" EventBus : " + msg);
 	}
 
-	void onUdpMessage(JsonObject json) {
+	void onUdpMessage(DatagramPacket packet) {
+		String msg = new String(packet.data().getBytes(), StandardCharsets.UTF_8);
+		log.info("UDP RXD :" + msg);
 		try {
-			log.info("UDP RXD : " + json);
-			if (queue.isEmpty()) {
-				log.info("------------------ UDP received after all reply ,ignored double ");
-				return;
-			}
-			if (outstandingUdp.getInteger("id").equals(json.getInteger("id"))) {
-				queue.take().reply(json);
-				retryCount = 0;
-				outstandingUdp = null;
-				udpReplyPending = false;
-				vertx.cancelTimer(udpResponseTimer);
-			} else {
-				log.info("-------------- UDP received no matching in queue, pending : "
-						+ outstandingUdp.getInteger("id") + " received : " + json.getInteger("id"));
-			}
-			if (json.getInteger("error") != 0) {
-				log.warning(" error occured , cancelling queue ");
-				while (!queue.isEmpty()) {
-					Message<Object> msg = queue.take();
-					msg.fail(-1, "previous command failed");
+			JsonObject json = new JsonObject(msg);
+			try {
+				if (queue.isEmpty()) {
+					log.info("------------------ UDP received after all reply ,ignored double ");
+					return;
 				}
+				if (outstandingUdp.getInteger("id").equals(json.getInteger("id"))) {
+					queue.take().reply(json);	// send reply to controller
+					log.info(" reply send");
+					retryCount = 0;
+					outstandingUdp = null;
+					udpReplyPending = false;
+					vertx.cancelTimer(udpResponseTimer);
+				} else {
+					log.info("-------------- UDP received no matching in queue, pending : "
+							+ outstandingUdp.getInteger("id") + " received : " + json.getInteger("id"));
+				}
+				if (json.getInteger("error") != 0) {
+					log.warning(" error occured , cancelling queue ");
+					while (!queue.isEmpty()) {
+						Message<Object> m = queue.take();
+						m.fail(-1, "previous command failed");
+					}
+				}
+				sendNext();
+			} catch (Exception e) {
+				log.log(Level.SEVERE, " udp message handling fails ", e);
 			}
-			sendNext();
 		} catch (Exception e) {
-			log.log(Level.SEVERE, " udp message handling fails ", e);
+			// System.out.println(msg);
+			// none JSON
+			eb.send("controller",
+					new JsonObject().put("from", "UDP").put("request", "log").put("data", packet.data().getBytes()));
 		}
+
 	}
 
 	/*
@@ -190,7 +206,7 @@ public class UdpVerticle extends AbstractVerticle {
 		super.stop();
 	}
 
-	public static void main(String[] args) {
+	public static void main_old(String[] args) {
 		System.setProperty("java.util.logging.SimpleFormatter.format", "%1$tF %1$tT %4$s %2$s %5$s%6$s%n");
 		UdpVerticle udp = new UdpVerticle();
 		Vertx.vertx().deployVerticle(udp);
