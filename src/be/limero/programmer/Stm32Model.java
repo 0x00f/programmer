@@ -5,7 +5,9 @@ import java.beans.PropertyChangeSupport;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 
+import be.limero.programmer.ui.SettingsTable;
 import io.vertx.core.json.JsonObject;
 import lombok.Data;
 import lombok.Getter;
@@ -33,6 +35,8 @@ public class Stm32Model {
 	boolean autoProgram;
 	int baudrate;
 	JsonObject status;
+	SettingsTable settings;
+	String prefix;
 
 	public enum Verification {
 		NA, OK, FAIL
@@ -62,5 +66,6 @@ public class Stm32Model {
 		Arrays.fill(flashMemory, (byte) 0xFF);
 		verification=Verification.NA;
 		autoProgram=false;
+		settings = new SettingsTable();
 	}
 }

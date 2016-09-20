@@ -166,7 +166,7 @@ public class UdpVerticle extends AbstractVerticle {
 				}
 				if (outstandingUdp.getInteger("id").equals(json.getInteger("id"))) {
 					queue.take().reply(json);	// send reply to controller
-					log.info(" reply send");
+//					log.info(" reply send");
 					retryCount = 0;
 					outstandingUdp = null;
 					udpReplyPending = false;

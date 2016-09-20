@@ -61,6 +61,8 @@ public class Stm32Programmer extends JFrame {
 	private final Stm32Model model = new Stm32Model();
 	private JTextArea txtUart;
 	private JButton btnErase;
+	private JComboBox<String> cbBaudrate;
+	private JTextField textField;
 
 	/**
 	 * Launch the application.
@@ -104,7 +106,7 @@ public class Stm32Programmer extends JFrame {
 				model.setHost(txtHost.getText());
 			}
 		});
-		txtHost.setText("192.168.0.132");
+		txtHost.setText(model.getHost());
 		txtHost.setBounds(90, 8, 141, 20);
 		contentPane.add(txtHost);
 		txtHost.setColumns(10);
@@ -134,8 +136,7 @@ public class Stm32Programmer extends JFrame {
 		contentPane.add(progressBar);
 
 		txtBinaryFile = new JTextField();
-		txtBinaryFile.setText(
-				"C:\\Users\\lieven2\\Atollic\\TrueSTUDIO\\ARM_workspace_5.4\\opencm3\\Debug\\opencm3.elf.binary");
+		txtBinaryFile.setText(model.getBinFile());
 		txtBinaryFile.setBounds(90, 39, 386, 20);
 		model.setBinFile(txtBinaryFile.getText());
 		contentPane.add(txtBinaryFile);
@@ -255,7 +256,7 @@ public class Stm32Programmer extends JFrame {
 				model.setPort(Integer.valueOf(textPort.getText()));
 			}
 		});
-		textPort.setText("1883");
+		textPort.setText(Integer.toString(model.getPort()));
 		textPort.setBounds(293, 8, 46, 20);
 		contentPane.add(textPort);
 		textPort.setColumns(10);
@@ -291,7 +292,7 @@ public class Stm32Programmer extends JFrame {
 		chckbxAutoprogram.setBounds(486, 70, 97, 23);
 		contentPane.add(chckbxAutoprogram);
 
-		JComboBox<String> cbBaudrate = new JComboBox<String>();
+		cbBaudrate = new JComboBox<String>();
 		cbBaudrate.setModel(new DefaultComboBoxModel<String>(
 				new String[] { "23800", "57600", "115200", "230400", "460800", "921600" }));
 		cbBaudrate.setSelectedIndex(2);
@@ -301,7 +302,7 @@ public class Stm32Programmer extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				getStm32Model().setBaudrate(Integer.valueOf((String) cbBaudrate.getSelectedItem()));
-				controller.send("baudrate");
+//				controller.send("baudrate");
 
 			}
 		});
@@ -318,6 +319,43 @@ public class Stm32Programmer extends JFrame {
 		JLabel lblUartBaudrate = new JLabel("UART Baudrate");
 		lblUartBaudrate.setBounds(430, 108, 75, 14);
 		contentPane.add(lblUartBaudrate);
+		
+		JButton btnSaveConfig = new JButton("Save Config");
+		btnSaveConfig.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				controller.saveConfig();
+			}
+		});
+		btnSaveConfig.setBounds(10, 138, 117, 23);
+		contentPane.add(btnSaveConfig);
+		
+		JButton button = new JButton("Load Config");
+		button.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				controller.loadConfig();
+			}
+		});
+		button.setBounds(140, 138, 117, 23);
+		contentPane.add(button);
+		
+		JButton btnSettings = new JButton("Settings");
+		btnSettings.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				new SettingsDialog(model.getSettings()).setVisible(true);;
+			}
+		});
+		btnSettings.setBounds(270, 138, 91, 23);
+		contentPane.add(btnSettings);
+		
+		textField = new JTextField();
+		textField.setBounds(524, 8, 174, 20);
+		contentPane.add(textField);
+		textField.setColumns(10);
+		
+		JLabel lblPrefix = new JLabel("prefix");
+		lblPrefix.setHorizontalAlignment(SwingConstants.TRAILING);
+		lblPrefix.setBounds(468, 11, 46, 14);
+		contentPane.add(lblPrefix);
 
 	}
 
@@ -343,6 +381,20 @@ public class Stm32Programmer extends JFrame {
 				getLblStatus().setText(model.getStatus().toString());
 				getProgressBar().setValue(model.getProgress());
 				getLblDeviceInfo().setText(model.getDeviceInfo());
+				String bauds[]=new String[] { "23800", "57600", "115200", "230400", "460800", "921600" };
+				
+				for(int i=0;i<bauds.length;i++){
+					if ( Integer.parseInt(bauds[i])==model.getBaudrate()) {
+						getCbBaudrate().setSelectedIndex(i);
+						break;
+					}
+				}
+				
+/*
+				
+				cbBaudrate.setModel(new DefaultComboBoxModel<String>(
+						));
+				cbBaudrate.setSelectedIndex(2);*/
 		
 
 				txtBinaryFile.setText(model.getBinFile());
@@ -439,5 +491,8 @@ public class Stm32Programmer extends JFrame {
 	}
 	public JButton getBtnErase() {
 		return btnErase;
+	}
+	public JComboBox getCbBaudrate() {
+		return cbBaudrate;
 	}
 }

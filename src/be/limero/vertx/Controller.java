@@ -1,6 +1,9 @@
 package be.limero.vertx;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Date;
@@ -89,23 +92,22 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 			// proxy = new MqttVerticle();
 			LogHandler lh = new LogHandler();
 			lh.register(this);
-
+			loadConfig();
+			ui.updateView();
 			eb.consumer("controller", message -> {
 				onEbMessage(message);
 				ui.updateView();
 			});
 			vertx.deployVerticle(this);
-			vertx.deployVerticle(new UdpVerticle());
+			vertx.deployVerticle(new MqttVerticle2());
 			fileCheckTimer = vertx.setPeriodic(1000, id -> {
 				long fileTime = new File(model.getBinFile()).lastModified();
 				if (model.isAutoProgram() & fileTime > fileLastModified) {
-					send("controller", "autoProgram", 20000, reply -> {
-					}, fail -> {
-					});
-
+					send("autoProgram");
 				}
 				fileLastModified = fileTime;
 			});
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -140,7 +142,6 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 	}
 
 	static int nextId = 0;
-
 
 	void send(String address, Object message, int timeout, Handler<JsonObject> okHandler,
 			Handler<JsonObject> failHandler) {
@@ -185,11 +186,22 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 					model.setConnected(json.getBoolean("connected"));
 					break;
 				}
+				case "settings" :{
+					model.getSettings().put(json.getString("topic"), json.getString("message"));
+					break;
 				}
-			} else if (json.containsKey("request")) {
+				}
+			} else if (json.containsKey("event")) {
+				switch (json.getString("event")) {
+				case "data": {
+					ui.addLog("remote", json.getString("message"));
+					break;
+				}
+				}
+			} else  if (json.containsKey("request")) {
 				switch (json.getString("request")) {
 				case "connect": {
-					send("proxy", request("connect").put("host", model.getHost()).put("port", model.getPort()), 1000,
+					send("proxy", request("connect").put("host", model.getHost()).put("port", model.getPort()), 5000,
 							reply -> {
 								model.setConnected(reply.getBoolean("connected"));
 								msg.reply(reply);
@@ -210,7 +222,7 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 					break;
 				}
 				case "log": {
-					ui.addLog("remote", new String(json.getBinary("data"), StandardCharsets.UTF_8));
+					ui.addLog("remote", json.getString("data")+"\n");
 					ui.updateView();
 					break;
 				}
@@ -325,7 +337,7 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 				}
 				case "read": {
 					for (int i = 0; i < FLASH_SIZE; i += FLASH_SECTOR_SIZE) {
-						send("proxy", request("readMemory").put("address", FLASH_START + i), 1000, reply -> {
+						send("proxy", request("readMemory").put("address", FLASH_START + i).put("length", 256), 1000, reply -> {
 							int percentage = ((reply.getInteger("address") + FLASH_SECTOR_SIZE - FLASH_START) * 100)
 									/ FLASH_SIZE;
 							model.setProgress(percentage);
@@ -486,6 +498,67 @@ public class Controller extends AbstractVerticle implements LogHandler.LogLine {
 	@Override
 	public void stop(Future<Void> stopFuture) throws Exception {
 		log.info("ControllerVerticle stopped!");
+	}
+
+	public void saveConfig() {
+		try {
+			JsonObject config = new JsonObject();
+			config.put("mqtt.host", model.getHost());
+			config.put("mqtt.port", model.getPort());
+			config.put("file.bin", model.getBinFile());
+			config.put("mqtt.prefix", model.getPrefix());
+			config.put("uart.baudrate", model.getBaudrate());
+			String configuration = config.encodePrettily();
+			PrintWriter writer = new PrintWriter("wibo.cfg", "UTF-8");
+			writer.println(configuration);
+			writer.close();
+		} catch (Exception ex) {
+			log.warning(" save Config failed : " + ex.getMessage());
+		}
+
+	}
+
+	String getValue(JsonObject json, String key, String defValue) {
+		if (json.containsKey(key))
+			return json.getString(key);
+		else
+			return defValue;
+	}
+
+	int getValue(JsonObject json, String key, int defValue) {
+		if (json.containsKey(key))
+			return json.getInteger(key);
+		else
+			return defValue;
+	}
+
+	public void loadConfig() {
+		String everything;
+		try {
+			BufferedReader br = new BufferedReader(new FileReader("wibo.cfg"));
+			try {
+				StringBuilder sb = new StringBuilder();
+				String line = br.readLine();
+
+				while (line != null) {
+					sb.append(line);
+					sb.append(System.lineSeparator());
+					line = br.readLine();
+				}
+				everything = sb.toString();
+			} finally {
+				br.close();
+			}
+			JsonObject config = new JsonObject(everything);
+
+			model.setHost(getValue(config, "mqtt.host", "test.mosquitto.org"));
+			model.setPort(getValue(config, "mqtt.port", 1883));
+			model.setBinFile(getValue(config, "file.bin", "c:\\"));
+			model.setBaudrate(getValue(config, "uart.baudrate", 460800));
+			model.setPrefix(getValue(config, "mqtt.prefix", "wibo1/bootloader"));
+		} catch (Exception ex) {
+			log.warning(" load Config failed : " + ex.getMessage());
+		}
 	}
 
 }
